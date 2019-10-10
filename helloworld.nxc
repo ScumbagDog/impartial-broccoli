@@ -1,3 +1,17 @@
+task schedule();
+task movement();
+
 task main() {
-  BluetoothWrite(0, "Hello World!");
+
+  Precedes(schedule);
+}
+
+task schedule(){
+  while(true){
+    start movement;
+  }
+}
+
+task movement(){
+
 }
