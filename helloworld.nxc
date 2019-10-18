@@ -1,17 +1,55 @@
+#include "movement.nxc"
+
 task schedule();
-task movement();
+task touchSensorRead();
+task writeToDisplay();
+task angleSensorRead();
+
+int cycleCount = 0;
+unsigned int touchSensorOutput = 0;
+int angleSensorOutput = 0;
+
+mutex touchSensorMutex;
+mutex angleSensorMutex;
+mutex cycleCountMutex;
 
 task main() {
-
+  SetSensorUltrasonic(IN_1);
+  SetSensorTouch(IN_2);
   Precedes(schedule);
 }
 
 task schedule(){
   while(true){
-    start movement;
+    start touchSensorRead;
+    start writeToDisplay;
+    start angleSensorRead;
+
+    Acquire(cycleCountMutex);
+    cycleCount++;
+    Release(cycleCountMutex);
   }
 }
 
-task movement(){
+task touchSensorRead(){
+  Acquire(touchSensorMutex);
+  touchSensorOutput = SensorUS(IN_1);
+  Release(touchSensorMutex);
+}
 
+task angleSensorRead(){
+  Acquire(angleSensorMutex);
+  angleSensorOutput = SENSOR_2;
+  Release(angleSensorMutex);
+}
+
+task writeToDisplay(){
+  Acquire(touchSensorMutex);
+  NumOut(0, LCD_LINE1, touchSensorOutput);
+  touchSensorOutput = 0;
+  Release(touchSensorMutex);
+  NumOut(0, LCD_LINE2, angleSensorOutput);
+  Acquire(cycleCountMutex);
+  NumOut(0, LCD_LINE3, cycleCount);
+  Release(cycleCountMutex);
 }
