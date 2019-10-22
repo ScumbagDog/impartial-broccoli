@@ -1,0 +1,46 @@
+#ifndef MOVE_IS_COMPILED
+#define MOVE_IS_COMPILED 1
+#define WHEEL_DIAMETER 10
+#include "vectors.nxc"
+#include "quickMaffs.nxc"
+
+void move();
+
+vec2 currentMovementVector;
+
+mutex moveVectorMutex;
+
+task movement(){
+  if(!floatEquals(vectorMag(currentMovementVector), 0)){
+    //If current vector isn't a nul-vektor
+    move();
+  }
+}
+
+void move(){
+  rotate();
+}
+
+void rotate(){
+  //do some code here that actually turns the wheels based on getRadiansToTurn
+}
+
+float getRadiansToTurn(){
+
+  vec2 straightAheadVector;
+  straightAheadVector.x = 0;
+  straightAheadVector.y = 1;
+
+  Acquire(moveVectorMutex);
+  float radsToRotate = vectorAngleBetween(straightAheadVector, currentMovementVector);
+  Release(moveVectorMutex);
+
+  if(radsToRotate > PI){
+    //if there are more radians than pi, ie. 180 degrees, it is more efficient to turn the other way
+    radsToRotate = radsToRotate - 2 * PI;
+    //this will make radians negative, and thus make it rotate the other way
+  }
+
+  return radsToRotate;
+}
+#endif

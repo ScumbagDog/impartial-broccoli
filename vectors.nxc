@@ -1,0 +1,53 @@
+#ifndef VECTOR_IS_COMPILED
+#define VECTOR_IS_COMPILED 1
+#include "quickMaffs.nxc"
+struct vec2
+{
+  float x;
+  float y;
+};
+
+vec2 vectorPlus(vec2 a, vec2 b){
+  vec2 resultVector;
+  resultVector.x = a.x + b.x;
+  resultVector.y = a.y + b.y;
+  return resultVector;
+}
+
+vec2 vectorMinus(vec2 a, vec2 b){
+  vec2 resultVector;
+  resultVector.x = a.x - b.x;
+  resultVector.y = a.y - b.y;
+  return resultVector;
+}
+
+vec2 vectorScalarMult(vec2 a, float scalar){
+  a.x = a.x * scalar;
+  a.y = a.y * scalar;
+  return a;
+}
+
+vec2 vectorScalarDiv(vec2 a, float scalar){
+  a.x = a.x / scalar;
+  a.y = a.y / scalar;
+  return a;
+}
+
+float vectorMag(vec2 a){
+  return sqrt(pow(a.x, 2) + pow(a.y, 2));
+}
+
+vec2 vectorNorm(vec2 a){
+  return vectorScalarDiv(a, vectorMag(a));
+}
+
+float vectorDotP(vec2 a, vec2 b){
+  //Parentheses for clarification, they're not really needed
+  return (a.x * b.x) + (a.y * b.y);
+}
+
+float vectorAngleBetween(vec2 a, vec2 b){
+  return vectorDotP(a, b) / (vectorMag(a) * vectorMag(b));
+}
+
+#endif

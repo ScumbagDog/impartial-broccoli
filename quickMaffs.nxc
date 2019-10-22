@@ -1,0 +1,21 @@
+#ifndef MATH_IS_COMPILED
+#define MATH_IS_COMPILED 1
+#define SMALL_NUMBER 0.0005
+
+int floatEquals(float a, float b){
+  return (a + SMALL_NUMBER) > b && (a - SMALL_NUMBER) < b;
+}
+
+int round(float a){
+  return a < floor(a + 0.5) ? a : a + 1;
+}
+
+int radToDeg(float rad){
+  return rad * (180 / PI);
+}
+
+float degToRad(int deg){
+  return deg / (180 * PI);
+}
+
+#endif

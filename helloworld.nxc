@@ -14,6 +14,7 @@ mutex angleSensorMutex;
 mutex cycleCountMutex;
 
 task main() {
+  SetSensorLowspeed(IN_1);
   SetSensorUltrasonic(IN_1);
   SetSensorTouch(IN_2);
   Precedes(schedule);
@@ -23,7 +24,7 @@ task schedule(){
   while(true){
     start touchSensorRead;
     start writeToDisplay;
-    start angleSensorRead;
+    //start angleSensorRead;
 
     Acquire(cycleCountMutex);
     cycleCount++;
@@ -33,7 +34,8 @@ task schedule(){
 
 task touchSensorRead(){
   Acquire(touchSensorMutex);
-  touchSensorOutput = SensorUS(IN_1);
+  touchSensorOutput = SensorUS(S1);
+  Wait(15);
   Release(touchSensorMutex);
 }
 
@@ -48,7 +50,7 @@ task writeToDisplay(){
   NumOut(0, LCD_LINE1, touchSensorOutput);
   touchSensorOutput = 0;
   Release(touchSensorMutex);
-  NumOut(0, LCD_LINE2, angleSensorOutput);
+
   Acquire(cycleCountMutex);
   NumOut(0, LCD_LINE3, cycleCount);
   Release(cycleCountMutex);
