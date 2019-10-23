@@ -15,7 +15,6 @@ mutex cycleCountMutex;
 
 task main() {
   SetSensorLowspeed(IN_1);
-  SetSensorUltrasonic(IN_1);
   SetSensorTouch(IN_2);
   Precedes(schedule);
 }
@@ -34,8 +33,7 @@ task schedule(){
 
 task touchSensorRead(){
   Acquire(touchSensorMutex);
-  touchSensorOutput = SensorUS(S1);
-  Wait(15);
+  touchSensorOutput = SENSOR_1;
   Release(touchSensorMutex);
 }
 

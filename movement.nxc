@@ -5,6 +5,7 @@
 #include "quickMaffs.nxc"
 
 void move();
+void rotate();
 
 vec2 currentMovementVector;
 
