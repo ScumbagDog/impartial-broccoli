@@ -1,3 +1,4 @@
+//Remember to compile with the -EF flags, else enhanced firmware functions won't be defined
 #include "movement.nxc"
 
 task schedule();
@@ -16,7 +17,8 @@ mutex cycleCountMutex;
 task main() {
   SetSensorLowspeed(IN_1);
   SetSensorTouch(IN_2);
-  Precedes(schedule);
+  driveStraight(4);
+  //Precedes(schedule);
 }
 
 task schedule(){

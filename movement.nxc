@@ -1,11 +1,16 @@
 #ifndef MOVE_IS_COMPILED
 #define MOVE_IS_COMPILED 1
-#define WHEEL_DIAMETER 10
+#define WHEEL_DIAMETER 8.5
+#define WHEEL_CIRCUMFERENCE WHEEL_DIAMETER * PI
+#define ROBOT_WIDTH 30
+#define CM_TO_VECTORUNIT 10
+#define MAX_MOTORPOWER 50
 #include "vectors.nxc"
 #include "quickMaffs.nxc"
 
 void move();
 void rotate();
+void driveStraight(float vectorUnitsToDrive);
 
 vec2 currentMovementVector;
 
@@ -19,11 +24,26 @@ task movement(){
 }
 
 void move(){
-  rotate();
+  if(!floatEquals(currentMovementVector.x, 0) || sign(currentMovementVector.y) < 0){
+    rotate();
+  }
+  driveStraight(currentMovementVector.y);
 }
 
 void rotate(){
   //do some code here that actually turns the wheels based on getRadiansToTurn
+}
+
+void driveStraight(float vectorUnitsToDrive){
+  //This could be optimized more, but this is more readable
+
+  float fullRotationsToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / WHEEL_CIRCUMFERENCE) / 10; //don't remove 10. for some reason it adds a factor 10 too much
+  int degreesToDrive = round(DEGREES_PER_CIRCLE * fullRotationsToDrive);
+  NumOut(0, LCD_LINE1, vectorUnitsToDrive * CM_TO_VECTORUNIT);
+  NumOut(0, LCD_LINE2, WHEEL_CIRCUMFERENCE);
+  NumOut(0, LCD_LINE3, (vectorUnitsToDrive * CM_TO_VECTORUNIT) / WHEEL_CIRCUMFERENCE);
+  NumOut(0, LCD_LINE4, fullRotationsToDrive);
+  RotateMotor(OUT_AB, MAX_MOTORPOWER, degreesToDrive);
 }
 
 float getRadiansToTurn(){

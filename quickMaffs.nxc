@@ -1,9 +1,10 @@
 #ifndef MATH_IS_COMPILED
 #define MATH_IS_COMPILED 1
 #define SMALL_NUMBER 0.0005
+#define DEGREES_PER_CIRCLE 360
 
 int floatEquals(float a, float b){
-  return (a + SMALL_NUMBER) > b && (a - SMALL_NUMBER) < b;
+  return abs(a - b) < SMALL_NUMBER;
 }
 
 int round(float a){
