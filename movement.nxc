@@ -39,10 +39,6 @@ void driveStraight(float vectorUnitsToDrive){
 
   float fullRotationsToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / WHEEL_CIRCUMFERENCE) / 10; //don't remove 10. for some reason it adds a factor 10 too much
   int degreesToDrive = round(DEGREES_PER_CIRCLE * fullRotationsToDrive);
-  NumOut(0, LCD_LINE1, vectorUnitsToDrive * CM_TO_VECTORUNIT);
-  NumOut(0, LCD_LINE2, WHEEL_CIRCUMFERENCE);
-  NumOut(0, LCD_LINE3, (vectorUnitsToDrive * CM_TO_VECTORUNIT) / WHEEL_CIRCUMFERENCE);
-  NumOut(0, LCD_LINE4, fullRotationsToDrive);
   RotateMotor(OUT_AB, MAX_MOTORPOWER, degreesToDrive);
 }
 
