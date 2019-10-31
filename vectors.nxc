@@ -47,7 +47,7 @@ float vectorDotP(vec2 a, vec2 b){
 }
 
 float vectorAngleBetween(vec2 a, vec2 b){
-  return vectorDotP(a, b) / (vectorMag(a) * vectorMag(b));
+  return acos(vectorDotP(a, b) / (vectorMag(a) * vectorMag(b)));
 }
 
 #endif

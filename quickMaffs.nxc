@@ -11,11 +11,11 @@ int round(float a){
   return a < floor(a + 0.5) ? a : a + 1;
 }
 
-int radToDeg(float rad){
+float radToDeg(float rad){
   return rad * (180 / PI);
 }
 
-float degToRad(int deg){
+float degToRad(float deg){
   return deg / (180 * PI);
 }
 

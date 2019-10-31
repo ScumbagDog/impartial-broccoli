@@ -1,37 +1,66 @@
 #ifndef MOVE_IS_COMPILED
 #define MOVE_IS_COMPILED 1
-#define WHEEL_DIAMETER 8.5
+#define WHEEL_DIAMETER 5.5
 #define WHEEL_CIRCUMFERENCE WHEEL_DIAMETER * PI
 #define ROBOT_WIDTH 30
-#define CM_TO_VECTORUNIT 10
+#define CM_TO_VECTORUNIT 100
 #define MAX_MOTORPOWER 50
 #include "vectors.nxc"
 #include "quickMaffs.nxc"
 
-void move();
-void rotate();
+void move(vec2 moveVector);
+void rotate(vec2 moveVector);
 void driveStraight(float vectorUnitsToDrive);
+float getRadiansToTurn(vec2 moveVector);
+task turnWithMotorA();
+task turnWithMotorB();
 
 vec2 currentMovementVector;
+int sharedDegreesToTurn;
 
 mutex moveVectorMutex;
+mutex sharedDegreeMutex;
 
 task movement(){
+  Acquire(moveVectorMutex);
   if(!floatEquals(vectorMag(currentMovementVector), 0)){
     //If current vector isn't a nul-vektor
-    move();
+    vec2 moveVectorSnapshot = currentMovementVector;
+    Release(moveVectorMutex);
+    move(moveVectorSnapshot);
+  }
+  else{
+    Release(moveVectorMutex);
   }
 }
 
-void move(){
-  if(!floatEquals(currentMovementVector.x, 0) || sign(currentMovementVector.y) < 0){
-    rotate();
+void move(vec2 moveVector){
+  if(!floatEquals(moveVector.x, 0) || sign(moveVector.y) < 0){
+    rotate(moveVector);
   }
-  driveStraight(currentMovementVector.y);
+  driveStraight(moveVector.y);
 }
 
-void rotate(){
+void rotate(vec2 moveVector){
   //do some code here that actually turns the wheels based on getRadiansToTurn
+  float radiansToTurnRobot = getRadiansToTurn(moveVector);
+  float distanceToTurnWheels = radiansToTurnRobot * (ROBOT_WIDTH / 2); //Robot width is the length of its radius, which is the length of one radian.
+  float radiansToTurnWheels = distanceToTurnWheels / (WHEEL_DIAMETER / 2);
+  int degreesToTurnWheels = round(radToDeg(radiansToTurnWheels)); //if the robot doesn't turn properly, change this line
+
+  Acquire(sharedDegreeMutex);
+  sharedDegreesToTurn = degreesToTurnWheels;
+  Release(sharedDegreeMutex);
+
+  StartTask(turnWithMotorA);
+  StartTask(turnWithMotorB);
+}
+
+task turnWithMotorA(){
+  RotateMotor(OUT_A, MAX_MOTORPOWER, (sharedDegreesToTurn / 2));
+}
+task turnWithMotorB(){
+  RotateMotor(OUT_B, MAX_MOTORPOWER, -(sharedDegreesToTurn / 2));
 }
 
 void driveStraight(float vectorUnitsToDrive){
@@ -40,18 +69,21 @@ void driveStraight(float vectorUnitsToDrive){
   float fullRotationsToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / WHEEL_CIRCUMFERENCE) / 10; //don't remove 10. for some reason it adds a factor 10 too much
   int degreesToDrive = round(DEGREES_PER_CIRCLE * fullRotationsToDrive);
   RotateMotor(OUT_AB, MAX_MOTORPOWER, degreesToDrive);
+  RotateMotor(OUT_AB, 0, 0); //This is to block the currentMovementVector-update until the robot has driven the entire stretch
+  Acquire(moveVectorMutex);
+    currentMovementVector.x = 0;
+    currentMovementVector.y = 0;
+  Release(moveVectorMutex);
 }
 
-float getRadiansToTurn(){
+float getRadiansToTurn(vec2 moveVector){
 
   vec2 straightAheadVector;
   straightAheadVector.x = 0;
   straightAheadVector.y = 1;
 
-  Acquire(moveVectorMutex);
-  float radsToRotate = vectorAngleBetween(straightAheadVector, currentMovementVector);
-  Release(moveVectorMutex);
-
+  float radsToRotate = vectorAngleBetween(straightAheadVector, moveVector);
+  
   if(radsToRotate > PI){
     //if there are more radians than pi, ie. 180 degrees, it is more efficient to turn the other way
     radsToRotate = radsToRotate - 2 * PI;
