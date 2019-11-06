@@ -2,7 +2,7 @@
 #define MOVE_IS_COMPILED 1
 #define WHEEL_DIAMETER 5.5
 #define WHEEL_CIRCUMFERENCE WHEEL_DIAMETER * PI
-#define ROBOT_WIDTH 30
+#define ROBOT_WIDTH 12
 #define CM_TO_VECTORUNIT 100
 #define MAX_MOTORPOWER 50
 #include "vectors.nxc"
@@ -57,10 +57,10 @@ void rotate(vec2 moveVector){
 }
 
 task turnWithMotorA(){
-  RotateMotor(OUT_A, MAX_MOTORPOWER, (sharedDegreesToTurn / 2));
+  RotateMotor(OUT_A, MAX_MOTORPOWER, -(sharedDegreesToTurn));
 }
 task turnWithMotorB(){
-  RotateMotor(OUT_B, MAX_MOTORPOWER, -(sharedDegreesToTurn / 2));
+  RotateMotor(OUT_B, MAX_MOTORPOWER, (sharedDegreesToTurn));
 }
 
 void driveStraight(float vectorUnitsToDrive){
