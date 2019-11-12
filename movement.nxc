@@ -1,10 +1,10 @@
 #ifndef MOVE_IS_COMPILED
 #define MOVE_IS_COMPILED 1
-#define WHEEL_DIAMETER 5.5
+#define WHEEL_DIAMETER 4.5
 #define WHEEL_CIRCUMFERENCE WHEEL_DIAMETER * PI
-#define ROBOT_WIDTH 12
+#define ROBOT_WIDTH 10
 #define CM_TO_VECTORUNIT 100
-#define MAX_MOTORPOWER 50
+#define MAX_MOTORPOWER 80
 #include "vectors.nxc"
 #include "quickMaffs.nxc"
 
@@ -14,12 +14,15 @@ void driveStraight(float vectorUnitsToDrive);
 float getRadiansToTurn(vec2 moveVector);
 task turnWithMotorA();
 task turnWithMotorB();
+task releaseMotors();
 
 vec2 currentMovementVector;
 int sharedDegreesToTurn;
+int releaseMotorCallCount;
 
 mutex moveVectorMutex;
 mutex sharedDegreeMutex;
+mutex rotationMutex;
 
 task movement(){
   Acquire(moveVectorMutex);
@@ -37,6 +40,10 @@ task movement(){
 void move(vec2 moveVector){
   if(!floatEquals(moveVector.x, 0) || sign(moveVector.y) < 0){
     rotate(moveVector);
+    Acquire(rotationMutex);
+    Release(rotationMutex);
+    moveVector.y = vectorMag(moveVector);
+    moveVector.x = 0;
   }
   driveStraight(moveVector.y);
 }
@@ -52,15 +59,26 @@ void rotate(vec2 moveVector){
   sharedDegreesToTurn = degreesToTurnWheels;
   Release(sharedDegreeMutex);
 
+  Acquire(rotationMutex);
   StartTask(turnWithMotorA);
   StartTask(turnWithMotorB);
 }
 
 task turnWithMotorA(){
   RotateMotor(OUT_A, MAX_MOTORPOWER, -(sharedDegreesToTurn));
+  ExitTo(releaseMotors);
 }
 task turnWithMotorB(){
   RotateMotor(OUT_B, MAX_MOTORPOWER, (sharedDegreesToTurn));
+  ExitTo(releaseMotors);
+}
+task releaseMotors(){
+  if(releaseMotorCallCount == 0){ //If only one motor is done, increment
+    releaseMotorCallCount++;
+  }else{  //if both are done, release the mutex and reset count
+    Release(rotationMutex);
+    releaseMotorCallCount = 0;
+  }
 }
 
 void driveStraight(float vectorUnitsToDrive){
@@ -84,10 +102,10 @@ float getRadiansToTurn(vec2 moveVector){
 
   float radsToRotate = vectorAngleBetween(straightAheadVector, moveVector);
   
-  if(radsToRotate > PI){
-    //if there are more radians than pi, ie. 180 degrees, it is more efficient to turn the other way
-    radsToRotate = radsToRotate - 2 * PI;
-    //this will make radians negative, and thus make it rotate the other way
+  if(moveVector.x < 0){
+    //vectorAngleBetween only returns the absolute value, but we need to know if we should turn left or right.
+    //easiest way to check for this is to look at x value and update radsToRotate accordingly.
+    radsToRotate = -radsToRotate;
   }
 
   return radsToRotate;

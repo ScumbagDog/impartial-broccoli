@@ -2,9 +2,9 @@
 #include "movement.nxc"
 
 task schedule();
-task touchSensorRead();
-task writeToDisplay();
-task angleSensorRead();
+void touchSensorRead();
+void writeToDisplay();
+void angleSensorRead();
 
 int cycleCount = 0;
 unsigned int touchSensorOutput = 0;
@@ -18,17 +18,18 @@ task main() {
   SetSensorLowspeed(IN_1);
   SetSensorTouch(IN_2);
   vec2 moveVector;
-  moveVector.x = 1;
-  moveVector.y = 0;
-  rotate(moveVector);
+  vec2 moveVector2;
+  moveVector.x = 0.5;
+  moveVector.y = 1;
+  move(moveVector);
   //Precedes(schedule);
 }
 
 task schedule(){
   while(true){
-    start touchSensorRead;
-    start writeToDisplay;
-    //start angleSensorRead;
+    touchSensorRead();
+    writeToDisplay();
+    //angleSensorRead();
 
     Acquire(cycleCountMutex);
     cycleCount++;
@@ -36,19 +37,19 @@ task schedule(){
   }
 }
 
-task touchSensorRead(){
+void touchSensorRead(){
   Acquire(touchSensorMutex);
   touchSensorOutput = SENSOR_1;
   Release(touchSensorMutex);
 }
 
-task angleSensorRead(){
+void angleSensorRead(){
   Acquire(angleSensorMutex);
   angleSensorOutput = SENSOR_2;
   Release(angleSensorMutex);
 }
 
-task writeToDisplay(){
+void writeToDisplay(){
   Acquire(touchSensorMutex);
   NumOut(0, LCD_LINE1, touchSensorOutput);
   touchSensorOutput = 0;
