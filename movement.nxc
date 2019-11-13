@@ -23,8 +23,9 @@ int releaseMotorCallCount;
 mutex moveVectorMutex;
 mutex sharedDegreeMutex;
 mutex rotationMutex;
+mutex countMutex;
 
-task movement(){
+void movement(){
   Acquire(moveVectorMutex);
   if(!floatEquals(vectorMag(currentMovementVector), 0)){
     //If current vector isn't a nul-vektor
@@ -73,11 +74,14 @@ task turnWithMotorB(){
   ExitTo(releaseMotors);
 }
 task releaseMotors(){
+  Acquire(countMutex);
   if(releaseMotorCallCount == 0){ //If only one motor is done, increment
     releaseMotorCallCount++;
+    Release(countMutex);
   }else{  //if both are done, release the mutex and reset count
     Release(rotationMutex);
     releaseMotorCallCount = 0;
+    Release(countMutex);
   }
 }
 
