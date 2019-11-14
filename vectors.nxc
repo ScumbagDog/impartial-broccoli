@@ -51,10 +51,7 @@ float vectorAngleBetween(vec2 a, vec2 b){
 }
 
 int isNullVector(vec2 a){
-  if (floatEquals(vectorMag(a), 0)){
-    return 1;
-  }
-  return 0;
+  return floatEquals(vectorMag(a), 0);
 }
 
 vec2 getNullVector(){
