@@ -1,0 +1,32 @@
+#ifndef QUEUE_IS_COMPILED
+#define QUEUE_IS_COMPILED 1
+#include "vectors.nxc"
+void enqueueVector(vec2 item, vec2 &inputArray[], int arraySize){
+  int i = arraySize;
+  while(isNullVector(inputArray[i-1])){
+    i--;
+    if(i == 0){
+      break;
+    }
+  }
+  inputArray[i] = item;
+}
+
+vec2 dequeueVector(vec2 &inputArray[], int arraySize){
+  vec2 returnVector = inputArray[0];
+  int i = 1;
+  while(!isNullVector(inputArray[i])){
+    inputArray[i-1] = inputArray[i];
+    i++;
+  }
+  inputArray[i-1] = getNullVector(); //remember to set the previously last index to null
+  return returnVector;
+}
+
+void initQueue(vec2 &queueToInit[], int queueSize){
+  int i;
+  for(i = 0; i < queueSize; i++){
+    queueToInit[i] = getNullVector();
+  }
+}
+#endif
