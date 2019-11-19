@@ -1,0 +1,42 @@
+#define SENSOR_US_SPEED 5
+#define ULTRASONIC_PORT IN_4
+
+byte results = 0;
+
+void rotateSensorMotor();
+task activateUSSensor();
+task rotateRight();
+task rotateLeft();
+
+
+task main() {
+   Precedes(rotateRight, activateUSSensor);
+   ClearScreen();
+   //NumOut(results);
+
+   Precedes(rotateLeft,  activateUSSensor);
+   ClearScreen();
+   //NumOut(results);
+
+   Precedes( rotateRight,  activateUSSensor);
+   ClearScreen();
+   //NumOut(results);
+}
+
+void rotateSensorMotor() {
+
+}
+
+task activateUSSensor() {
+   SetSensorUltrasonic(ULTRASONIC_PORT);
+   results = SensorUS(ULTRASONIC_PORT);
+
+}
+
+task rotateRight(){
+   RotateMotor(OUT_C, SENSOR_US_SPEED, 90);
+}
+
+task rotateLeft(){
+   RotateMotor(OUT_C, SENSOR_US_SPEED, -180);
+}
