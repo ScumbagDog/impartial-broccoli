@@ -50,4 +50,15 @@ float vectorAngleBetween(vec2 a, vec2 b){
   return acos(vectorDotP(a, b) / (vectorMag(a) * vectorMag(b)));
 }
 
+int isNullVector(vec2 a){
+  return floatEquals(vectorMag(a), 0);
+}
+
+vec2 getNullVector(){
+  vec2 nullVec;
+  nullVec.x = 0;
+  nullVec.y = 0;
+  return nullVec;
+}
+
 #endif

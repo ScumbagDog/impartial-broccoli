@@ -2,6 +2,7 @@
 #define MATH_IS_COMPILED 1
 #define SMALL_NUMBER 0.0005
 #define DEGREES_PER_CIRCLE 360
+#define EULER 2.718
 
 int floatEquals(float a, float b){
   return abs(a - b) < SMALL_NUMBER;
