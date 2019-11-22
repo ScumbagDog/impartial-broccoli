@@ -1,0 +1,183 @@
+#define int sampleSize = 1000, maxReadings=50,sensorMax = 155,sensorHeading =0;
+#define int sensorX =0, sensorY = 0, noiseReduction1 =1, noiseReduction2 =1, noiseReduction3 =1, noiseReduction4 =1;
+#define int sensorMax = 155, zhit=1, zshort =1, zmax =1, zrand =1, ohit =1, lambdashort =1;
+
+struct timeStep
+{
+ state states[sampleSize];
+ state probStates[sampleSize];
+ float weigths[sampleSize];
+ sensorReading sensor;
+}
+
+struct state
+{
+ int x,y,heading;
+ float probability;
+};
+struct sensorReading
+{
+ vec2 vector;
+ float distanceDriven;
+ byte ultraSonic[maxReadings];
+ byte ultraSonicHeading[maxReadings];
+ int heading;
+};
+
+
+timeStep monteCarlo(bool &List[][], sensorReading sensor,timeStep previousTimeStep)
+{
+  timeStep currentTimeStep;
+  currentTimeStep.sensor = sensor;
+  int i;
+  for(i=0;i<samplesSize;i++){
+
+        currentTimeStep.states[i]= sampleMotionModel(sensor,previousTimeStep.states[i],previousTimeStep.sensor,List);
+
+  }
+
+}
+
+state sampleMotionModel(sensorReading sensor, state previousState, sensorReading previousSensorReading, bool &List[][] ){
+      float probability;
+      state newState;
+	  newState = sensorMotionModel(sensor, previousState, previousSensorReading);
+      newState.probability = likelihoodFinderModel(sensor,newState,List);
+      return newState;
+}
+
+state sensorMotionModel(sensorReading sensor, state previousState, sensorReading previousSensorReading){
+      float rotation1 = atan2(sensor.vector.y-previousSensorReading.vector.y,sensor.vector.x-previousSensorReading.vector.x)-previousSensorReading.heading;
+      float trans = sqrt(pow(previousSensorReading.vector.x-sensor.vector.x,2)+pow(previousSensorReading.vector.y-sensor.vector.y,2));
+      float rotation2 = sensor.heading-previousSensorReading.heading-rotation1;
+
+      
+      float rotation1Updated = rotation1 - sample(noiseReduction1*rotation1+noiseReduction2*trans);
+      float transUpdated = trans-sample(noiseReduction3*trans+noiseReduction4*(rotation1+rotation2));
+      float rotation2Updated = rotation2 - sample(noiseReduction1*rotation2+noiseReduction2*trans);
+      
+      state newState;
+      newState.x = previousState.x+transUpdated*Cos(previousState.heading+rotation1Updated);
+      newState.y = previousState.y+transUpdated*Sin(previousState.heading+rotation1Updated);
+      newState.heading = previousState.heading + rotation1Updated + rotation2Updated;
+      
+      return newState;
+}
+
+float sample(float b){
+     return sqrt(6)/2*(rand(b*2)-b)*(rand(b*2)-b);
+
+}
+
+
+
+float probabilityTriangular(float a, float b){
+      if(a>sqrt(6*b)){
+        return 0;
+      }else return (sqrt(6*b)-a)/6*b
+}
+
+float likelihoodFinderModel(SensorReadings sensor, state newState, bool &List[][]){
+      float probability =1;
+	  int i;
+	  for (i=0; i<maxReadings;i++){
+	     if(sensor.ultraSonic[i] >=sensorMax){
+		     int sensorXt = trunc(newState.x+ sensorX * cos(sensor.heading)-sensorY*sin(sensor.heading)+sensor.ultraSonic[i]*cos(sensor.heading+sensorHeading)+0.5);
+			 int sensorYt = trunc(newState.y+ sensorY * cos(sensor.heading)+sensorX*sin(sensor.heading)+sensor.ultraSonic[i]*cos(sensor.heading+sensorHeading)+0.5);
+			 float dist2 =minDistance(sensorXt,sensorYt);
+			 probability=probability*(zhit*probabilityTriangular(dist2,pow(ohit,2))+zrand/zmax);
+		 }
+	  
+	  }
+	  return probability;
+
+}
+
+
+float minDistance(int x, int y){
+
+return 5.0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+state motionModelProbability(sensorReading sensor,state newState, state previousState, sensorReading previousSensorReading){
+      float rotation1 = atan2(sensor.vector.y-previousSensorReading.vector.y,sensor.vector.x-previousSensorReading.vector.x)-previousSensorReading.heading;
+      float trans = sqrt(pow(previousSensorReading.vector.x-sensor.vector.x,2)+pow(previousSensorReading.vector.y-sensor.vector.y,2));
+      float rotation2 = sensor.heading-previousSensorReading.heading-rotation1;
+
+
+      float rotation1Odometry = atan2(newState.y-previousState.y, newState.x-previousState.x)-previousState.heading;
+      float transOdometry = sqrt(pow(previousState.x-newState.x,2)+pow(previousState.y-newState.y,2));
+      float rotation2Odometry = newState.heading-previousState.heading-rotation1;
+      
+      float prob1 = probabilityTriangular(rotation1-rotation1Odometry,noiseReduction1*rotation1Odometry+noiseReduction2*transOdometry);
+      float prob2 = probabilityTriangular(trans-transOdometry,noiseReduction3*transOdometry+noiseReduction4*(rotation1Odometry+rotation2Odometry));
+      float prob2 = probabilityTriangular(rotation2-rotation2Odometry,noiseReduction1*rotation2Odometry+noiseReduction2*transOdometry);
+
+      return prob1*prob2*prob3;
+}
+
+void learnParameters(float &Parameters[],byte &SensorReadings[],int SensorReadingsLength,byte &realReadings[]){
+     int i;
+	 float n,ohit;
+	 ohit = calculateOhit(SensorReadings,SensorReadingsLength,realReadings);
+	 for(i=0;i<SensorReadingsLength;i++){
+	    n = pow(phit()+Pshort+Pmax+Prand,-1)
+	 }
+	 
+     
+
+}
+
+float phit(byte sensorReading, byte realReading, float ohit){
+     if(0=<sensorReading<= sensorMax){
+	    int i;
+		float n=0;
+		
+		 pow(EULER,-1/4*(pow(realReading,3)/3-4*pow(realReading,2)+4*realReading))/(sqrt(2*PI*pow(ohit,2)));  
+		
+		
+		
+		return 
+	 }
+	 return 0;
+}
+
+float calculateBigN(byte sensorReading, byte realReading, float ohit){
+     float bigDiversion = -0.5*pow(sensorReading-realReading,2)/pow(ohit,2);
+     return 1/sqrt(2*PI*pow(ohit,2))*pow(EULER,bigDiversion);
+}
+
+float calculateOhit(byte &SensorReadings[],int SensorReadingsLength,byte &realReadings[]){
+     int i, hitReadings =0;
+	 float sum =0;
+	 for(i=0;i<SensorReadingsLength;i++){
+	    if(0=<sensorReadings[i]<= sensorMax){
+		  sum +=pow(sensorReadings[i]-realReadings[i],2);
+		  hitReadings++;
+		}
+		return sqrt(1/hitReadings*sum);
+	 }
+}
+
