@@ -2,8 +2,8 @@
 #define ROOM_WIDTH 345
 #define NUM_ACTIONS 4
 #define GRID_FIELD_WIDTH 20
-#define MAP_LENGTH (475 / 20) + 1
-#define MAP_WIDTH (345 / 20) + 1
+#define MAP_LENGTH 24
+#define MAP_WIDTH 18
 #define UNDEFINED -1
 #define T_MAX MAP_LENGTH * MAP_WIDTH
 #define NODE_TO_NODE_COST 1
@@ -14,23 +14,22 @@
 
 enum FieldValue {unoccupied, table, wall};
 
-struct gridCoord {
+struct gridCoord{
   float x;
   float y;
 };
 
 struct path {
-  gridCoord coordLst[MAP_LENGTH * MAP_WIDTH];
+  gridCoord vecLst[MAP_LENGTH * MAP_WIDTH];
   int length;
 };
 
 struct graphNode {
-  gridCoord coordinate;
   unsigned short h;
   unsigned short c;
   unsigned short t;
   byte whichLst;
-  gridCoord parent;
+  unsigned short parentInd;
 };
 
 
@@ -45,183 +44,152 @@ void fillMap(){
   }
 }
 
-gridCoord makeCoord(int x, int y) {
-  gridCoord coord;
-  
-  coord.x = x;
-  coord.y = y;
-
-  return coord;
+unsigned short calcX(unsigned short index){
+  return index / MAP_WIDTH;
 }
 
-bool isValid(gridCoord coord) {
-  int x = coord.x, int y = coord.y;
-
-  return (0 <= x && x < MAP_LENGTH) && (0 <= y && y < MAP_WIDTH) && map[x][y] == unoccupied; 
+unsigned short calcY(unsigned short index){
+  return index % MAP_WIDTH;
 }
 
-gridCoord lstIndexToCoord(int index){
-  return makeCoord(index / MAP_WIDTH, index % MAP_WIDTH);
+bool isValid(unsigned short index) {
+  return 0 <= index && index < MAP_LENGTH * MAP_WIDTH && map[calcX(index)][calcY(index)] == unoccupied; 
 }
 
 void initializeNodeLst(graphNode &nodeLst[]) {
-  gridCoord coord;
-
   for (int i = 0; i < MAP_LENGTH * MAP_WIDTH; i++) {
-    coord = lstIndexToCoord(i);
-    nodeLst[i].coordinate = coord;
-    nodeLst[i].h = 0;
     nodeLst[i].c = 0;
     nodeLst[i].t = 0;
     nodeLst[i].whichLst = noLst;
-    nodeLst[i].parent.x = UNDEFINED;
-    nodeLst[i].parent.y = UNDEFINED;
+    nodeLst[i].parentInd = UNDEFINED;
   }
 }
 
-int coordToLstIndex(gridCoord coord) {
-  return coord.x * MAP_WIDTH + coord.y;
+unsigned short coordToLstIndex(unsigned short x, unsigned short y) {
+  if (0 <= x && x < MAP_LENGTH && 0 <= y && y < MAP_WIDTH) {
+    return x * MAP_WIDTH + y;
+  } else {
+    return UNDEFINED;
+  }
 }
 
-gridCoord findLowestT(graphNode &nodeLst[]) {
-  int index = 0, lowestT = T_MAX, iLowestT = UNDEFINED, yLowestT = UNDEFINED;
+unsigned short findLowestT(graphNode &nodeLst[]) {
+  unsigned short lowestT = T_MAX, iLowestT = UNDEFINED;
 
   for (int i = 0; i < MAP_LENGTH * MAP_WIDTH; i++) {
       if (nodeLst[i].whichLst == openLst && nodeLst[i].t < lowestT) {
-        lowestT = nodeLst[index].t;
+        lowestT = nodeLst[i].t;
         iLowestT = i;
       }
   }
 
-  return lstIndexToCoord(iLowestT);
+  return iLowestT;
 }
 
-void addToOpenLst(gridCoord coord, graphNode &nodeLst[], unsigned short &openLstLength){
-  nodeLst[coordToLstIndex(coord)].whichLst = openLst;
+void addToOpenLst(unsigned short index, graphNode &nodeLst[], unsigned short &openLstLength){
+  nodeLst[index].whichLst = openLst;
   openLstLength++;
 }
 
-bool coordEquals(gridCoord coord1, gridCoord coord2) {
-  return coord1.x == coord2.x && coord1.y == coord2.y;
+bool coordEquals(unsigned short index1, unsigned short index2) {
+  return index1 == index2;
 }
 
-unsigned short calcDist(gridCoord currCoord, gridCoord goalCoord) {
-  return abs(currCoord.x - goalCoord.x) + abs(currCoord.y - goalCoord.y);
+unsigned short calcDist(unsigned short index1, unsigned short index2) {
+  return abs(calcX(index1) - calcX(index2)) + abs(calcY(index1) - calcY(index2));
 }
 
-bool aStarSearch(path pathToGoal, int startX, int startY, int goalX, int goalY) {
-  graphNode nodeLst[MAP_LENGTH * MAP_WIDTH];
+void visitSuccessor(unsigned short succInd, unsigned short currInd, unsigned short goalInd, graphNode &nodeLst[], unsigned short &openLstLength){
   graphNode successor;
-  gridCoord startCoord = makeCoord(startX, startY), goalCoord = makeCoord(goalX, goalY), currCoord;
-  unsigned short openLstLength = 0, hSucc, cSucc, tSucc;
-  bool openLstIsEmpty = false;
 
+  if (isValid(succInd)) {
+      NumOut(0, LCD_LINE1, calcX(succInd));
+      NumOut(0, LCD_LINE2, calcY(succInd));
+      Wait(SEC_1);
+      ClearScreen();
+
+    if (nodeLst[succInd].whichLst == closedLst) {
+      return;
+    }
+
+    successor.c = nodeLst[currInd].c + NODE_TO_NODE_COST;
+    successor.t = calcDist(succInd, goalInd) + successor.c;
+    successor.parentInd = currInd;
+    
+    if (nodeLst[succInd].whichLst == noLst || (nodeLst[succInd].whichLst == openLst && successor.t < nodeLst[succInd].t)) {
+      nodeLst[succInd] = successor;
+      addToOpenLst(succInd, nodeLst, openLstLength);
+    }
+  }
+}
+
+gridCoord makeVec(unsigned short index) {
+  gridCoord vec;
+
+  vec.x = calcX(index);
+  vec.y = calcY(index);
+
+  return vec;
+}
+
+void generatePath(path &pathToGoal, unsigned short startInd, unsigned short goalInd, graphNode &nodeLst[]){
+  unsigned short currInd = goalInd;
+  
+  while(currInd != startInd){
+    pathToGoal.vecLst[currInd] = makeVec(currInd);
+    pathToGoal.length++;
+    currInd = nodeLst[currInd].parentInd;
+  }
+}
+
+bool aStarSearch(path &pathToGoal, unsigned short startX, unsigned short startY, unsigned short goalX, unsigned short goalY) {
+  graphNode nodeLst[MAP_LENGTH*MAP_WIDTH];
+  graphNode successor;
+  unsigned short startInd = coordToLstIndex(startX, startY), goalInd = coordToLstIndex(goalX, goalY), currInd, succInd, openLstLength = 0;
+  bool openLstIsEmpty = false;
+  
   pathToGoal.length = 0;
 
-  if(isValid(startCoord) && isValid(goalCoord)) {
+  if(isValid(startInd) && isValid(goalInd)) {
     initializeNodeLst(nodeLst);
 
-    addToOpenLst(startCoord, nodeLst, openLstLength);
+    addToOpenLst(startInd, nodeLst, openLstLength);
   
     //---------- Begin search ----------
     until (openLstIsEmpty) {
-      currCoord = findLowestT(nodeLst);
-      nodeLst[coordToLstIndex(currCoord)].whichLst = closedLst;
-
-      if (coordEquals(currCoord, goalCoord)) {
+      currInd = findLowestT(nodeLst);
+      nodeLst[currInd].whichLst = closedLst;
+      openLstLength--;
+      
+      if (coordEquals(currInd, goalInd)) {
         break;
       }
 
       //---------- Visit north successor ----------
-      successor.coordinate.x = currCoord.x;
-      successor.coordinate.y = currCoord.y + 1;
-      successor.parent = currCoord;
-
-      if (isValid(successor.coordinate)) {
-        if (nodeLst[coordToLstIndex(successor.coordinate)].whichLst == closedLst) {
-          break;
-        }
-        
-        successor.h = calcDist(successor.coordinate, goalCoord);
-        successor.c = nodeLst[coordToLstIndex(currCoord)].c + NODE_TO_NODE_COST;
-        successor.t = successor.h + successor.c;
-    
-        if (nodeLst[coordToLstIndex(successor.coordinate)].whichLst == openLst && successor.t < nodeLst[coordToLstIndex(successor.coordinate)].t) {
-          nodeLst[coordToLstIndex(successor.coordinate)] = successor;
-          addToOpenLst(successor.coordinate, nodeLst, openLstLength);
-        }
-      }
+      succInd = coordToLstIndex(calcX(currInd), calcY(currInd) + 1);
+      visitSuccessor(succInd, currInd, goalInd, nodeLst, openLstLength);
 
       //---------- Visit east successor ----------
-      successor.coordinate.x = currCoord.x + 1;
-      successor.coordinate.y = currCoord.y;
-      successor.parent = currCoord;
-
-      if (isValid(successor.coordinate)) {
-        if (nodeLst[coordToLstIndex(successor.coordinate)].whichLst == closedLst) {
-          break;
-        }
-        
-        successor.h = calcDist(successor.coordinate, goalCoord);
-        successor.c = nodeLst[coordToLstIndex(currCoord)].c + NODE_TO_NODE_COST;
-        successor.t = successor.h + successor.c;
-    
-        if (nodeLst[coordToLstIndex(successor.coordinate)].whichLst == openLst && successor.t < nodeLst[coordToLstIndex(successor.coordinate)].t) {
-          nodeLst[coordToLstIndex(successor.coordinate)] = successor;
-          addToOpenLst(successor.coordinate, nodeLst, openLstLength);
-        }
-      }
+      succInd = coordToLstIndex(calcX(currInd) + 1, calcY(currInd));
+      visitSuccessor(succInd, currInd, goalInd, nodeLst, openLstLength);
 
       //---------- Visit south successor ----------
-      successor.coordinate.x = currCoord.x;
-      successor.coordinate.y = currCoord.y - 1;
-      successor.parent = currCoord;
-
-      if (isValid(successor.coordinate)) {
-        if (nodeLst[coordToLstIndex(successor.coordinate)].whichLst == closedLst) {
-          break;
-        }
-        
-        successor.h = calcDist(successor.coordinate, goalCoord);
-        successor.c = nodeLst[coordToLstIndex(currCoord)].c + NODE_TO_NODE_COST;
-        successor.t = successor.h + successor.c;
-    
-        if (nodeLst[coordToLstIndex(successor.coordinate)].whichLst == openLst && successor.t < nodeLst[coordToLstIndex(successor.coordinate)].t) {
-          nodeLst[coordToLstIndex(successor.coordinate)] = successor;
-          addToOpenLst(successor.coordinate, nodeLst, openLstLength);
-        }
-      }
+      succInd = coordToLstIndex(calcX(currInd), calcY(currInd) - 1);
+      visitSuccessor(succInd, currInd, goalInd, nodeLst, openLstLength);
 
       //---------- Visit west successor ----------
-      successor.coordinate.x = currCoord.x - 1;
-      successor.coordinate.y = currCoord.y;
-      successor.parent = currCoord;
+      succInd = coordToLstIndex(calcX(currInd) - 1, calcY(currInd));
+      visitSuccessor(succInd, currInd, goalInd, nodeLst, openLstLength);
 
-      if (isValid(successor.coordinate)) {
-        if (nodeLst[coordToLstIndex(successor.coordinate)].whichLst == closedLst) {
-          break;
-        }
-        
-        successor.h = calcDist(successor.coordinate, goalCoord);
-        successor.c = nodeLst[coordToLstIndex(currCoord)].c + NODE_TO_NODE_COST;
-        successor.t = successor.h + successor.c;
-    
-        if (nodeLst[coordToLstIndex(successor.coordinate)].whichLst == openLst && successor.t < nodeLst[coordToLstIndex(successor.coordinate)].t) {
-          nodeLst[coordToLstIndex(successor.coordinate)] = successor;
-          addToOpenLst(successor.coordinate, nodeLst, openLstLength);
-        }
-      }
-
-      openLstIsEmpty = openLstLength > 0;
+      openLstIsEmpty = openLstLength <= 0;
     }
 
-    //if(nodeLst[coordToLstIndex(goalCoord)].whichLst == closedLst) {
-      //pathToGoal = generatePath(startCoord, goalCoord, nodeLst);
-    //}
+    if(nodeLst[goalInd].whichLst == closedLst) {
+      generatePath(pathToGoal, startInd, goalInd, nodeLst);
+    }
   }
 
-  //return pathToGoal.length == 0;
-  return true;
+  return pathToGoal.length == 0;
 }
 
 task main() {
