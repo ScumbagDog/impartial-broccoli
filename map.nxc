@@ -1,9 +1,9 @@
 #define ROOM_LENGTH 475
 #define ROOM_WIDTH 345
 #define NUM_ACTIONS 4
-#define GRID_FIELD_WIDTH 20
-#define MAP_LENGTH 24
-#define MAP_WIDTH 18
+#define GRID_FIELD_WIDTH 10
+#define MAP_LENGTH 30
+#define MAP_WIDTH 30
 #define UNDEFINED -1
 #define T_MAX MAP_LENGTH * MAP_WIDTH
 #define NODE_TO_NODE_COST 1
@@ -30,18 +30,17 @@ void fillMap();
 bool findRoute(gridCoord &path[], unsigned short &pathLength, unsigned short startX, unsigned short startY, unsigned short goalX, unsigned short goalY);
 bool isValid(unsigned short index);
 void initializeNodeLst(graphNode &nodeLst[]);
-void addToOpenLst(unsigned short index, graphNode &nodeLst[], unsigned short &openLstLength);
 unsigned short findLowestT(graphNode &nodeLst[]);
 bool coordEquals(unsigned short index1, unsigned short index2);
 unsigned short coordToLstIndex(unsigned short x, unsigned short y);
 unsigned short calcX(unsigned short index);
 unsigned short calcY(unsigned short index);
-void visitSuccessor(unsigned short succInd, unsigned short currInd, unsigned short goalInd, graphNode &nodeLst[], unsigned short &openLstLength);
+bool visitSucc(graphNode &successor, unsigned short succInd, unsigned short succInd_whichLst, unsigned short succInd_t, unsigned short currInd, unsigned short currInd_c, unsigned short goalInd);
 unsigned short calcManhattanDist(unsigned short index1, unsigned short index2);
 gridCoord makeVec(unsigned short index);
 float findDistToObject(gridCoord coord);
 bool outOfBounds(int index, bool isX);
-int calcEuclideanDist(int xFrom, int yFrom, int xTo, int yTo);
+float calcEuclideanDist(float xFrom, float yFrom, float xTo, float yTo);
 float min(float val1, float val2);
 
 FieldValue map[MAP_LENGTH][MAP_WIDTH];
@@ -62,21 +61,33 @@ void fillMap(){
 //------------------------------ A* search ------------------------------
 bool findRoute(gridCoord &path[], unsigned short &pathLength, unsigned short startX, unsigned short startY, unsigned short goalX, unsigned short goalY) {
   graphNode nodeLst[MAP_LENGTH * MAP_WIDTH];
-  graphNode successor;
-  unsigned short startInd = coordToLstIndex(startX, startY), goalInd = coordToLstIndex(goalX, goalY), currInd, succInd, openLstLength = 0;
-  bool openLstIsEmpty = false;
+  graphNode succ;
+  unsigned short startInd = coordToLstIndex(startX, startY), goalInd = coordToLstIndex(goalX, goalY), currInd, succInd;
+  unsigned short openLstLength = 0, lowestT, iLowestT = UNDEFINED;
+  bool openLstIsEmpty = false, addToOpenLst;
 
   pathLength = 0;
 
   if(isValid(startInd) && isValid(goalInd)) {
     initializeNodeLst(nodeLst);
 
-    addToOpenLst(startInd, nodeLst, openLstLength);
+    //---------- Add startInd to openLst ----------
     nodeLst[startInd].t = 0;
-  
+    nodeLst[startInd].whichLst = openLst;
+    openLstLength++;
+
     //---------- Begin search ----------
     until (openLstIsEmpty) {
-      currInd = findLowestT(nodeLst);
+      //---------- Find node with lowest t-value ----------
+      lowestT = T_MAX;
+
+      for (int i = 0; i < MAP_LENGTH * MAP_WIDTH; i++) {
+        if (nodeLst[i].whichLst == openLst && nodeLst[i].t < lowestT) {
+          lowestT = nodeLst[i].t;
+          currInd = i;
+        }
+      }
+
       nodeLst[currInd].whichLst = closedLst;
       openLstLength--;
 
@@ -86,19 +97,43 @@ bool findRoute(gridCoord &path[], unsigned short &pathLength, unsigned short sta
 
       //---------- Visit north successor ----------
       succInd = coordToLstIndex(calcX(currInd), calcY(currInd) + 1);
-      visitSuccessor(succInd, currInd, goalInd, nodeLst, openLstLength);
+      addToOpenLst = visitSucc(succ, succInd, nodeLst[succInd].whichLst, nodeLst[succInd].t, currInd, nodeLst[currInd].c, goalInd);
 
+      if(addToOpenLst) {
+        nodeLst[succInd] = succ;
+        nodeLst[succInd].whichLst = openLst;
+        openLstLength++;
+      }
+      
       //---------- Visit east successor ----------
       succInd = coordToLstIndex(calcX(currInd) + 1, calcY(currInd));
-      visitSuccessor(succInd, currInd, goalInd, nodeLst, openLstLength);
+      addToOpenLst = visitSucc(succ, succInd, nodeLst[succInd].whichLst, nodeLst[succInd].t, currInd, nodeLst[currInd].c, goalInd);
+
+      if(addToOpenLst) {
+        nodeLst[succInd] = succ;
+        nodeLst[succInd].whichLst = openLst;
+        openLstLength++;
+      }
 
       //---------- Visit south successor ----------
       succInd = coordToLstIndex(calcX(currInd), calcY(currInd) - 1);
-      visitSuccessor(succInd, currInd, goalInd, nodeLst, openLstLength);
+      addToOpenLst = visitSucc(succ, succInd, nodeLst[succInd].whichLst, nodeLst[succInd].t, currInd, nodeLst[currInd].c, goalInd);
+
+      if(addToOpenLst) {
+        nodeLst[succInd] = succ;
+        nodeLst[succInd].whichLst = openLst;
+        openLstLength++;
+      }
 
       //---------- Visit west successor ----------
       succInd = coordToLstIndex(calcX(currInd) - 1, calcY(currInd));
-      visitSuccessor(succInd, currInd, goalInd, nodeLst, openLstLength);
+      addToOpenLst = visitSucc(succ, succInd, nodeLst[succInd].whichLst, nodeLst[succInd].t, currInd, nodeLst[currInd].c, goalInd);
+
+      if(addToOpenLst) {
+        nodeLst[succInd] = succ;
+        nodeLst[succInd].whichLst = openLst;
+        openLstLength++;
+      }
 
       openLstIsEmpty = openLstLength <= 0;
     }
@@ -126,11 +161,6 @@ void initializeNodeLst(graphNode &nodeLst[]) {
     nodeLst[i].whichLst = noLst;
     nodeLst[i].parentInd = UNDEFINED;
   }
-}
-
-void addToOpenLst(unsigned short index, graphNode &nodeLst[], unsigned short &openLstLength){
-  nodeLst[index].whichLst = openLst;
-  openLstLength++;
 }
 
 unsigned short findLowestT(graphNode &nodeLst[]) {
@@ -166,23 +196,18 @@ unsigned short calcY(unsigned short index){
   return index % MAP_WIDTH;
 }
 
-void visitSuccessor(unsigned short succInd, unsigned short currInd, unsigned short goalInd, graphNode &nodeLst[], unsigned short &openLstLength) {
-  graphNode successor;
-
-  if (isValid(succInd)) {
-    if (nodeLst[succInd].whichLst == closedLst) {
-      return;
-    }
-
-    successor.c = nodeLst[currInd].c + NODE_TO_NODE_COST;
+bool visitSucc(graphNode &successor, unsigned short succInd, unsigned short succInd_whichLst, unsigned short succInd_t, unsigned short currInd, unsigned short currInd_c, unsigned short goalInd) {
+  if (isValid(succInd) && succInd_whichLst != closedLst) {
+    successor.c = currInd_c + NODE_TO_NODE_COST;
     successor.t = calcManhattanDist(succInd, goalInd) + successor.c;
     successor.parentInd = currInd;
     
-    if (nodeLst[succInd].whichLst == noLst || (nodeLst[succInd].whichLst == openLst && successor.t < nodeLst[succInd].t)) {
-      nodeLst[succInd] = successor;
-      addToOpenLst(succInd, nodeLst, openLstLength);
+    if (succInd_whichLst == noLst || (succInd_whichLst == openLst && successor.t < succInd_t)) {
+      return true;
     }
   }
+
+  return false;
 }
 
 unsigned short calcManhattanDist(unsigned short index1, unsigned short index2) {
@@ -195,16 +220,12 @@ gridCoord makeVec(unsigned short index) {
   vec.x = calcX(index);
   vec.y = calcY(index);
 
-  NumOut(0, LCD_LINE1, vec.x);
-  NumOut(0, LCD_LINE2, vec.y);
-  Wait(1000);
-
   return vec;
 }
 
 //------------------------------ Distance to nearest object ------------------------------
 float findDistToObject(gridCoord coord) {
-  unsigned short xInit, xLimit, yInit, yLimit, layer = 0;
+  int xInit, xLimit, yInit, yLimit, layer = 0;
   float shortestDist = SHRT_MAX, tempDist;
   bool objectFound = false;
 
@@ -247,7 +268,7 @@ bool outOfBounds(int index, bool isX) {
   }
 }
 
-int calcEuclideanDist(int xFrom, int yFrom, int xTo, int yTo) {
+float calcEuclideanDist(float xFrom, float yFrom, float xTo, float yTo) {
   return sqrt(pow(abs(xFrom - xTo), 2) + pow(abs(yFrom - yTo), 2));
 }
 
@@ -265,18 +286,17 @@ task main() {
   unsigned short pathLength;
   float shortestDist;
 
-  coord.x = 3;
+  coord.x = 4;
   coord.y = 3;
   
   fillMap();
-  shortestDist = findDistToObject(coord);
-  
-  /*findRoute(path, pathLength, 0, 0, 5, 5);
+  //shortestDist = findDistToObject(coord);
 
-  /*for(int i = pathLength-1; i >= 0; i--){
+  findRoute(path, pathLength, 1, 1, 5, 5);
+
+  for(int i = pathLength - 1; i >= 0; i--){
     NumOut(0, LCD_LINE1, path[i].x);
     NumOut(0, LCD_LINE2, path[i].y);
-    NumOut(0, LCD_LINE3, i);
     Wait(1000);
-  }*/
+  }
 }
