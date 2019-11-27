@@ -1,0 +1,53 @@
+#include "quickMaffs.nxc"
+#include "vectors.nxc"
+#include "MonteCarlo.nxc"
+#include "movement.nxc"
+#include "vectorQueue.nxc"
+#define startx 2
+#define starty 2
+#define startHeading 0
+timeStep timeStepArray[2];
+
+
+void ininateTimeStep(){
+	timeStep timeStep0;
+	state probState;
+	probState.x = startx;
+	probState.y = starty;
+	probState.heading = startHeading;
+	probState.probability = 1;
+	int i;
+	for(i=0;i<sampleSize;i++){
+		timeStep0.propStates[i] = probState;
+	}
+	vec2 vec;
+	vec.x=0;
+	vec.y=0;
+	timeStep0.sensor.vector = vec;
+	timeStepArray[1] = timeStep0;
+
+}
+void firstMove(int startx, int starty, int endx, int endy){
+	newPath(startx,starty,endx,endy);
+	scheduelPartPath();
+}
+void nextMove(sensorReading currentSensorReading){
+	newTimeStep(currentSensorReading);
+	expandPath();
+	scheduelPartPath();
+}
+void expandPath(){
+	state bestState = findBestState(timeStepArray[1]);
+	newPath(bestState.x,bestState.y,path[1].x,path[1].y)
+
+}
+void scheduelPartPath(){
+
+}
+
+void newTimeStep(sensorReading currentSensorReading){
+	timeStepArray[0] = timeStepArray[1];
+	timeStep currentTimeStep =	monteCarlo(currentSensorReading,timeStepArray[0]);
+	timeStepArray[1] = currentTimeStep;
+		 
+}

@@ -18,12 +18,12 @@
 #define ohit 8.4662
 #define lambdashort 0.0183
 #define drawProb 1000
+int drawCount;
 typedef struct{
  vec2 vector;
- float distanceDriven;
  byte ultraSonic[maxReadings];
  byte ultraSonicHeading[maxReadings];
- int heading;
+ int heading,readings;
 }sensorReading;
 
 
@@ -41,13 +41,13 @@ typedef struct{
  sensorReading sensor;
 }timeStep;
 
-timeStep monteCarlo(bool &List[][], sensorReading sensor,timeStep previousTimeStep);
-state sampleMotionModel(sensorReading sensor, state previousState, sensorReading previousSensorReading, bool &List[][] );
+timeStep monteCarlo(sensorReading sensor,timeStep previousTimeStep);
+state sampleMotionModel(sensorReading sensor, state previousState, sensorReading previousSensorReading);
 state sensorMotionModel(sensorReading sensor,state previousState, sensorReading previousSensorReading);
 float sample(float b);
 float probabilityTriangular(float a, float b);
-float likelihoodFinderModel(sensorReading sensor, state newState, bool &List[][]);
-float minDistance(int x, int y);
+float likelihoodFinderModel(sensorReading sensor, state newState);
+float distanceNearestObject(int x, int y);
 
 
 
@@ -55,16 +55,16 @@ task main(){
 
 }
 
-timeStep monteCarlo(bool &List[][], sensorReading sensor,timeStep previousTimeStep)
+timeStep monteCarlo(sensorReading sensor,timeStep previousTimeStep)
 {
   timeStep currentTimeStep;
   currentTimeStep.sensor = sensor;
   int i;
   for( i=0;i<sampleSize;i++){
-        currentTimeStep.probStates[i]= sampleMotionModel(sensor,previousTimeStep.probStates[i],previousTimeStep.sensor,List);
+        currentTimeStep.probStates[i]= sampleMotionModel(sensor,previousTimeStep.probStates[i],previousTimeStep.sensor);
 
   }
-  int drawCount=0;
+  drawCount=0;
   for(i=0;i<sampleSize;i++){
      
 	 if(currentTimeStep.probStates[i].probability*drawProb>=(Random(drawProb-1)+1)){
@@ -75,11 +75,11 @@ timeStep monteCarlo(bool &List[][], sensorReading sensor,timeStep previousTimeSt
  return currentTimeStep;
 }
 
-state sampleMotionModel(sensorReading sensor, state previousState, sensorReading previousSensorReading, bool &List[][] ){
+state sampleMotionModel(sensorReading sensor, state previousState, sensorReading previousSensorReading){
       float probability;
       state newState;
 	  newState = sensorMotionModel(sensor, previousState, previousSensorReading);
-      newState.probability = likelihoodFinderModel(sensor,newState,List);
+      newState.probability = likelihoodFinderModel(sensor,newState);
       return newState;
 }
 
@@ -115,30 +115,37 @@ float probabilityTriangular(float a, float b){
 }
 
 
-float likelihoodFinderModel(sensorReading sensor, state newState, bool &List[][]){
+float likelihoodFinderModel(sensorReading sensor, state newState){
       float probability =1;
 	  int i;
 	  for (i=0; i<maxReadings;i++){
-	     if(sensor.ultraSonic[i] >=sensorMax){
+	     if(sensor.ultraSonic[i] >=sensor.readings){
 		     int sensorXt = trunc(newState.x+ sensorX * cos(sensor.heading)-sensorY*sin(sensor.heading)+sensor.ultraSonic[i]*cos(sensor.heading+sensorHeading)+0.5);
 			 int sensorYt = trunc(newState.y+ sensorY * cos(sensor.heading)+sensorX*sin(sensor.heading)+sensor.ultraSonic[i]*cos(sensor.heading+sensorHeading)+0.5);
-			 float dist2 =minDistance(sensorXt,sensorYt);
+			 float dist2 =findDistToObject(sensorXt,sensorYt);
 			 probability=probability*(zhit*probabilityTriangular(dist2,pow(ohit,2))+zrand/zmax);
 		 }
-	  
 	  }
 	  return probability;
 
 }
 
-
-float minDistance(int x, int y){
-
-return 5.0;
+state findBestState(timeStep currentTimeStep){
+	state bestState;
+	if(drawCount != 0){
+		state bestState = currentTimeStep.states[0];
+	}else{
+		//Make a exception
+	}
+	int i;
+	for(i=1;i<drawCount;i++){
+		if(currentTimeStep.states[i].probability > bestState.probability){
+			bestState = currentTimeStep.states[i];
+		}
+		
+	}
+	return bestState;
 }
-
-
-
 
 
 
@@ -175,6 +182,7 @@ float motionModelProbability(sensorReading sensor,state newState, state previous
 
       return prob1*prob2*prob3;
 }
+
 /*
 void learnParameters(float &Parameters[],byte &SensorReadings[],int SensorReadingsLength,byte &realReadings[]){
      int i;
