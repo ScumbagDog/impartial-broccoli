@@ -5,12 +5,8 @@
 #define MAP_LENGTH 30
 #define MAP_WIDTH 30
 #define UNDEFINED -1
-#define T_MAX MAP_LENGTH * MAP_WIDTH
 #define NODE_TO_NODE_COST 1
-#define NO_LST 0
-#define OPEN_LST 1
-#define OPEN_LST 1
-
+#define STEP_LENGTH 3
 
 enum FieldValue {unoccupied, table, wall};
 
@@ -58,17 +54,21 @@ void fillMap(){
   }
 }
 
+bool movingInStraightLine(unsigned short currInd, unsigned short tempInd){
+  return calcX(currInd) == calcX(tempInd) || calcY(currInd) == calcY(tempInd);
+}
+
 //------------------------------ A* search ------------------------------
 bool findRoute(gridCoord &path[], unsigned short &pathLength, unsigned short startX, unsigned short startY, unsigned short goalX, unsigned short goalY) {
   graphNode nodeLst[MAP_LENGTH * MAP_WIDTH];
   graphNode succ;
-  unsigned short startInd = coordToLstIndex(startX, startY), goalInd = coordToLstIndex(goalX, goalY), currInd, succInd;
-  unsigned short openLstLength = 0, lowestT, iLowestT = UNDEFINED;
+  unsigned short startInd = coordToLstIndex(startX, startY), goalInd = coordToLstIndex(goalX, goalY), currInd, parInd, succInd, tempInd, openLstLength = 0;
+  unsigned short lowestT, iLowestT = UNDEFINED, step = 0;
   bool openLstIsEmpty = false, addToOpenLst;
 
   pathLength = 0;
 
-  if(isValid(startInd) && isValid(goalInd)) {
+  if(startInd != goalInd && isValid(startInd) && isValid(goalInd)) {
     initializeNodeLst(nodeLst);
 
     //---------- Add startInd to openLst ----------
@@ -79,7 +79,7 @@ bool findRoute(gridCoord &path[], unsigned short &pathLength, unsigned short sta
     //---------- Begin search ----------
     until (openLstIsEmpty) {
       //---------- Find node with lowest t-value ----------
-      lowestT = T_MAX;
+      lowestT = SHRT_MAX;
 
       for (int i = 0; i < MAP_LENGTH * MAP_WIDTH; i++) {
         if (nodeLst[i].whichLst == openLst && nodeLst[i].t < lowestT) {
@@ -138,16 +138,34 @@ bool findRoute(gridCoord &path[], unsigned short &pathLength, unsigned short sta
       openLstIsEmpty = openLstLength <= 0;
     }
 
-    if (nodeLst[goalInd].whichLst == closedLst){
-      while(currInd != startInd){
+    if (nodeLst[goalInd].whichLst == closedLst) {
+      while (true) {
         path[pathLength] = makeVec(currInd);
         pathLength++;
-        currInd = nodeLst[currInd].parentInd;
+
+        if (currInd == startInd) {
+          break;
+        }
+
+        parInd = nodeLst[currInd].parentInd;
+        tempInd = nodeLst[parInd].parentInd;
+        step = 1;
+
+        while (step < STEP_LENGTH && parInd != startInd && movingInStraightLine(currInd, tempInd)) {
+          parInd = tempInd;
+          tempInd = nodeLst[parInd].parentInd;
+          step++;
+        }
+
+        currInd = parInd;
       }
+      return true;
+    } else {
+      return false;
     }
   }
   
-  return pathLength != 0;
+  return nodeLst[goalInd].whichLst == closedLst;
 }
 
 bool isValid(unsigned short index) {
@@ -157,14 +175,14 @@ bool isValid(unsigned short index) {
 void initializeNodeLst(graphNode &nodeLst[]) {
   for (int i = 0; i < MAP_LENGTH * MAP_WIDTH; i++) {
     nodeLst[i].c = 0;
-    nodeLst[i].t = T_MAX;
+    nodeLst[i].t = SHRT_MAX;
     nodeLst[i].whichLst = noLst;
     nodeLst[i].parentInd = UNDEFINED;
   }
 }
 
 unsigned short findLowestT(graphNode &nodeLst[]) {
-  unsigned short lowestT = T_MAX, iLowestT = UNDEFINED;
+  unsigned short lowestT = SHRT_MAX, iLowestT = UNDEFINED;
 
   for (int i = 0; i < MAP_LENGTH * MAP_WIDTH; i++) {
     if (nodeLst[i].whichLst == openLst && nodeLst[i].t < lowestT) {
@@ -292,11 +310,11 @@ task main() {
   fillMap();
   //shortestDist = findDistToObject(coord);
 
-  findRoute(path, pathLength, 1, 1, 5, 5);
+  findRoute(path, pathLength, 1, 1, 10, 10);
 
-  for(int i = pathLength - 1; i >= 0; i--){
+  for(int i = 0; i < pathLength; i++){
     NumOut(0, LCD_LINE1, path[i].x);
     NumOut(0, LCD_LINE2, path[i].y);
-    Wait(1000);
+    Wait(4000);
   }
 }
