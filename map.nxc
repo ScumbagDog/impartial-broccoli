@@ -7,6 +7,7 @@
 #define UNDEFINED -1
 #define NODE_TO_NODE_COST 1
 #define STEP_LENGTH 3
+#define PATH_LENGTH (MAP_LENGTH * MAP_WIDTH)
 
 enum FieldValue {unoccupied, table, wall};
 
@@ -23,7 +24,7 @@ struct graphNode {
 };
 
 void fillMap();
-bool findRoute(gridCoord &path[], unsigned short &pathLength, unsigned short startX, unsigned short startY, unsigned short goalX, unsigned short goalY);
+bool findRoute(unsigned short startX, unsigned short startY, unsigned short goalX, unsigned short goalY);
 bool isValid(unsigned short index);
 void initializeNodeLst(graphNode &nodeLst[]);
 unsigned short findLowestT(graphNode &nodeLst[]);
@@ -41,6 +42,8 @@ float min(float val1, float val2);
 
 FieldValue map[MAP_LENGTH][MAP_WIDTH];
 const byte noLst = 1, openLst = 2, closedLst = 3;
+gridCoord path[PATH_LENGTH];
+int pathStart = PATH_LENGTH;
 
 void fillMap(){
   for(int x = 0; x < MAP_LENGTH; x++) {
@@ -59,14 +62,12 @@ bool movingInStraightLine(unsigned short currInd, unsigned short tempInd){
 }
 
 //------------------------------ A* search ------------------------------
-bool findRoute(gridCoord &path[], unsigned short &pathLength, unsigned short startX, unsigned short startY, unsigned short goalX, unsigned short goalY) {
+bool findRoute(unsigned short startX, unsigned short startY, unsigned short goalX, unsigned short goalY) {
   graphNode nodeLst[MAP_LENGTH * MAP_WIDTH];
   graphNode succ;
   unsigned short startInd = coordToLstIndex(startX, startY), goalInd = coordToLstIndex(goalX, goalY), currInd, parInd, succInd, tempInd, openLstLength = 0;
   unsigned short lowestT, iLowestT = UNDEFINED, step = 0;
   bool openLstIsEmpty = false, addToOpenLst;
-
-  pathLength = 0;
 
   if(startInd != goalInd && isValid(startInd) && isValid(goalInd)) {
     initializeNodeLst(nodeLst);
@@ -139,9 +140,13 @@ bool findRoute(gridCoord &path[], unsigned short &pathLength, unsigned short sta
     }
 
     if (nodeLst[goalInd].whichLst == closedLst) {
+      if (pathStart != PATH_LENGTH) {     // If there are already elements in the path.
+        pathStart++;     // Ensures that first element is overridden by itself to avoid duplicate vectors.
+      }
+
       while (true) {
-        path[pathLength] = makeVec(currInd);
-        pathLength++;
+        pathStart--;
+        path[pathStart] = makeVec(currInd);
 
         if (currInd == startInd) {
           break;
@@ -310,7 +315,7 @@ task main() {
   fillMap();
   //shortestDist = findDistToObject(coord);
 
-  findRoute(path, pathLength, 1, 1, 10, 10);
+  findRoute(1, 1, 10, 10);
 
   for(int i = 0; i < pathLength; i++){
     NumOut(0, LCD_LINE1, path[i].x);
