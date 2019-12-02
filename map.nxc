@@ -1,3 +1,5 @@
+#include "vectors.nxc"
+
 #define ROOM_LENGTH 475
 #define ROOM_WIDTH 345
 #define NUM_ACTIONS 4
@@ -11,11 +13,6 @@
 
 enum FieldValue {unoccupied, table, wall};
 
-struct gridCoord{
-  float x;
-  float y;
-};
-
 struct graphNode {
   unsigned short c;
   unsigned short t;
@@ -27,22 +24,21 @@ void fillMap();
 bool findRoute(unsigned short startX, unsigned short startY, unsigned short goalX, unsigned short goalY);
 bool isValid(unsigned short index);
 void initializeNodeLst(graphNode &nodeLst[]);
-unsigned short findLowestT(graphNode &nodeLst[]);
-bool coordEquals(unsigned short index1, unsigned short index2);
+bool indexEquals(unsigned short index1, unsigned short index2);
 unsigned short coordToLstIndex(unsigned short x, unsigned short y);
 unsigned short calcX(unsigned short index);
 unsigned short calcY(unsigned short index);
-bool visitSucc(graphNode &successor, unsigned short succInd, unsigned short succInd_whichLst, unsigned short succInd_t, unsigned short currInd, unsigned short currInd_c, unsigned short goalInd);
 unsigned short calcManhattanDist(unsigned short index1, unsigned short index2);
-gridCoord makeVec(unsigned short index);
-float findDistToObject(gridCoord coord);
+vec2 makeVec(unsigned short index);
+bool movingInStraightLine(unsigned short currInd, unsigned short tempInd);
+float findDistToObject(vec2 vec);
 bool outOfBounds(int index, bool isX);
 float calcEuclideanDist(float xFrom, float yFrom, float xTo, float yTo);
 float min(float val1, float val2);
 
 FieldValue map[MAP_LENGTH][MAP_WIDTH];
 const byte noLst = 1, openLst = 2, closedLst = 3;
-gridCoord path[PATH_LENGTH];
+vec2 path[PATH_LENGTH];
 int pathStart = PATH_LENGTH;
 
 void fillMap(){
@@ -57,17 +53,13 @@ void fillMap(){
   }
 }
 
-bool movingInStraightLine(unsigned short currInd, unsigned short tempInd){
-  return calcX(currInd) == calcX(tempInd) || calcY(currInd) == calcY(tempInd);
-}
-
 //------------------------------ A* search ------------------------------
 bool findRoute(unsigned short startX, unsigned short startY, unsigned short goalX, unsigned short goalY) {
   graphNode nodeLst[MAP_LENGTH * MAP_WIDTH];
   graphNode succ;
   unsigned short startInd = coordToLstIndex(startX, startY), goalInd = coordToLstIndex(goalX, goalY), currInd, parInd, succInd, tempInd, openLstLength = 0;
   unsigned short lowestT, iLowestT = UNDEFINED, step = 0;
-  bool openLstIsEmpty = false, addToOpenLst;
+  bool openLstIsEmpty = false;
 
   if(startInd != goalInd && isValid(startInd) && isValid(goalInd)) {
     initializeNodeLst(nodeLst);
@@ -92,53 +84,74 @@ bool findRoute(unsigned short startX, unsigned short startY, unsigned short goal
       nodeLst[currInd].whichLst = closedLst;
       openLstLength--;
 
-      if (coordEquals(currInd, goalInd)) {
+      if (indexEquals(currInd, goalInd)) {
         break;
       }
 
       //---------- Visit north successor ----------
       succInd = coordToLstIndex(calcX(currInd), calcY(currInd) + 1);
-      addToOpenLst = visitSucc(succ, succInd, nodeLst[succInd].whichLst, nodeLst[succInd].t, currInd, nodeLst[currInd].c, goalInd);
-
-      if(addToOpenLst) {
-        nodeLst[succInd] = succ;
-        nodeLst[succInd].whichLst = openLst;
-        openLstLength++;
+      
+      if (isValid(succInd) && nodeLst[succInd].whichLst != closedLst) {
+        succ.c = nodeLst[currInd].c + NODE_TO_NODE_COST;
+        succ.t = calcManhattanDist(succInd, goalInd) + succ.c;
+        succ.parentInd = currInd;
+    
+        if (nodeLst[succInd].whichLst == noLst || (nodeLst[succInd].whichLst == openLst && succ.t < nodeLst[succInd].t)) {
+          nodeLst[succInd] = succ;
+          nodeLst[succInd].whichLst = openLst;
+          openLstLength++;
+        }
       }
       
       //---------- Visit east successor ----------
       succInd = coordToLstIndex(calcX(currInd) + 1, calcY(currInd));
-      addToOpenLst = visitSucc(succ, succInd, nodeLst[succInd].whichLst, nodeLst[succInd].t, currInd, nodeLst[currInd].c, goalInd);
-
-      if(addToOpenLst) {
-        nodeLst[succInd] = succ;
-        nodeLst[succInd].whichLst = openLst;
-        openLstLength++;
+      
+      if (isValid(succInd) && nodeLst[succInd].whichLst != closedLst) {
+        succ.c = nodeLst[currInd].c + NODE_TO_NODE_COST;
+        succ.t = calcManhattanDist(succInd, goalInd) + succ.c;
+        succ.parentInd = currInd;
+    
+        if (nodeLst[succInd].whichLst == noLst || (nodeLst[succInd].whichLst == openLst && succ.t < nodeLst[succInd].t)) {
+          nodeLst[succInd] = succ;
+          nodeLst[succInd].whichLst = openLst;
+          openLstLength++;
+        }
       }
 
       //---------- Visit south successor ----------
       succInd = coordToLstIndex(calcX(currInd), calcY(currInd) - 1);
-      addToOpenLst = visitSucc(succ, succInd, nodeLst[succInd].whichLst, nodeLst[succInd].t, currInd, nodeLst[currInd].c, goalInd);
 
-      if(addToOpenLst) {
-        nodeLst[succInd] = succ;
-        nodeLst[succInd].whichLst = openLst;
-        openLstLength++;
+      if (isValid(succInd) && nodeLst[succInd].whichLst != closedLst) {
+        succ.c = nodeLst[currInd].c + NODE_TO_NODE_COST;
+        succ.t = calcManhattanDist(succInd, goalInd) + succ.c;
+        succ.parentInd = currInd;
+    
+        if (nodeLst[succInd].whichLst == noLst || (nodeLst[succInd].whichLst == openLst && succ.t < nodeLst[succInd].t)) {
+          nodeLst[succInd] = succ;
+          nodeLst[succInd].whichLst = openLst;
+          openLstLength++;
+        }
       }
 
       //---------- Visit west successor ----------
       succInd = coordToLstIndex(calcX(currInd) - 1, calcY(currInd));
-      addToOpenLst = visitSucc(succ, succInd, nodeLst[succInd].whichLst, nodeLst[succInd].t, currInd, nodeLst[currInd].c, goalInd);
-
-      if(addToOpenLst) {
-        nodeLst[succInd] = succ;
-        nodeLst[succInd].whichLst = openLst;
-        openLstLength++;
+      
+      if (isValid(succInd) && nodeLst[succInd].whichLst != closedLst) {
+        succ.c = nodeLst[currInd].c + NODE_TO_NODE_COST;
+        succ.t = calcManhattanDist(succInd, goalInd) + succ.c;
+        succ.parentInd = currInd;
+    
+        if (nodeLst[succInd].whichLst == noLst || (nodeLst[succInd].whichLst == openLst && succ.t < nodeLst[succInd].t)) {
+          nodeLst[succInd] = succ;
+          nodeLst[succInd].whichLst = openLst;
+          openLstLength++;
+        }
       }
 
       openLstIsEmpty = openLstLength <= 0;
     }
 
+    // ---------- If the goal has been found, then we can generate the path ----------
     if (nodeLst[goalInd].whichLst == closedLst) {
       if (pathStart != PATH_LENGTH) {     // If there are already elements in the path.
         pathStart++;     // Ensures that first element is overridden by itself to avoid duplicate vectors.
@@ -170,6 +183,7 @@ bool findRoute(unsigned short startX, unsigned short startY, unsigned short goal
     }
   }
   
+  // ---------- Returns true if the goal was found ----------
   return nodeLst[goalInd].whichLst == closedLst;
 }
 
@@ -186,20 +200,7 @@ void initializeNodeLst(graphNode &nodeLst[]) {
   }
 }
 
-unsigned short findLowestT(graphNode &nodeLst[]) {
-  unsigned short lowestT = SHRT_MAX, iLowestT = UNDEFINED;
-
-  for (int i = 0; i < MAP_LENGTH * MAP_WIDTH; i++) {
-    if (nodeLst[i].whichLst == openLst && nodeLst[i].t < lowestT) {
-      lowestT = nodeLst[i].t;
-      iLowestT = i;
-    }
-  } 
-
-  return iLowestT;
-}
-
-bool coordEquals(unsigned short index1, unsigned short index2) {
+bool indexEquals(unsigned short index1, unsigned short index2) {
   return index1 == index2;
 }
 
@@ -219,26 +220,12 @@ unsigned short calcY(unsigned short index){
   return index % MAP_WIDTH;
 }
 
-bool visitSucc(graphNode &successor, unsigned short succInd, unsigned short succInd_whichLst, unsigned short succInd_t, unsigned short currInd, unsigned short currInd_c, unsigned short goalInd) {
-  if (isValid(succInd) && succInd_whichLst != closedLst) {
-    successor.c = currInd_c + NODE_TO_NODE_COST;
-    successor.t = calcManhattanDist(succInd, goalInd) + successor.c;
-    successor.parentInd = currInd;
-    
-    if (succInd_whichLst == noLst || (succInd_whichLst == openLst && successor.t < succInd_t)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 unsigned short calcManhattanDist(unsigned short index1, unsigned short index2) {
   return abs(calcX(index1) - calcX(index2)) + abs(calcY(index1) - calcY(index2));
 }
 
-gridCoord makeVec(unsigned short index) {
-  gridCoord vec;
+vec2 makeVec(unsigned short index) {
+  vec2 vec;
 
   vec.x = calcX(index);
   vec.y = calcY(index);
@@ -246,24 +233,28 @@ gridCoord makeVec(unsigned short index) {
   return vec;
 }
 
+bool movingInStraightLine(unsigned short currInd, unsigned short tempInd) {
+  return calcX(currInd) == calcX(tempInd) || calcY(currInd) == calcY(tempInd);
+}
+
 //------------------------------ Distance to nearest object ------------------------------
-float findDistToObject(gridCoord coord) {
+float findDistToObject(vec2 vec) {
   int xInit, xLimit, yInit, yLimit, layer = 0;
   float shortestDist = SHRT_MAX, tempDist;
   bool objectFound = false;
 
   until (objectFound){
-    xInit = coord.x - layer;
-    xLimit = coord.x + layer;
+    xInit = vec.x - layer;
+    xLimit = vec.x + layer;
 
-    yInit = coord.y - layer;
-    yLimit = coord.y + layer;
+    yInit = vec.y - layer;
+    yLimit = vec.y + layer;
 
     for(int x = xInit; x <= xLimit; x++) {
       for(int y = yInit; y <= yLimit; ) {
         if (!outOfBounds(x, true) && !outOfBounds(y, false)) {
           if (map[x][y] == table || map[x][y] == wall) {
-            tempDist = calcEuclideanDist(coord.x, coord.y, x, y);
+            tempDist = calcEuclideanDist(vec.x, vec.y, x, y);
             shortestDist = min(tempDist, shortestDist);
             objectFound = true;
           }
@@ -300,26 +291,5 @@ float min(float val1, float val2) {
     return val1;
   } else {
     return val2;
-  }
-}
-
-task main() {
-  gridCoord coord;
-  gridCoord path[MAP_LENGTH * MAP_WIDTH];
-  unsigned short pathLength;
-  float shortestDist;
-
-  coord.x = 4;
-  coord.y = 3;
-  
-  fillMap();
-  //shortestDist = findDistToObject(coord);
-
-  findRoute(1, 1, 10, 10);
-
-  for(int i = 0; i < pathLength; i++){
-    NumOut(0, LCD_LINE1, path[i].x);
-    NumOut(0, LCD_LINE2, path[i].y);
-    Wait(4000);
   }
 }
