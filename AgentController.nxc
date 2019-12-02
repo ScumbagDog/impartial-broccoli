@@ -1,7 +1,7 @@
 #include "quickMaffs.nxc"
 #include "vectors.nxc"
 #include "MonteCarlo.nxc"
-#include "movement.nxc"
+#include "map.nxc"
 #include "vectorQueue.nxc"
 #define START_X 2
 #define START_Y 2
@@ -31,6 +31,7 @@ void initiateTimeStep(){
 	vec.y=0;
 	sensorReading sensorReading0;
 	sensorReading0.vector = vec;
+	sensorReading.odometryHeading = START_HEADING;
 	timeStep0.sensor = sensorReading0 ;
 	timeStepArray[1] = timeStep0;
 
@@ -55,9 +56,23 @@ void expandPath(){
 }
 int schedulePartOfPath(vec2 &inputArray[], int arraySize){
 	int i;
+	int odometryHeading= findBestState(timeStepArray[1]).heading;
+	vec2 commandVec;
+	commandVec.x =0;
+	commandVec.y =0;
 	for(i=0;i<VECTORS_TO_SCHEDUEL;i++){
-		//enqueueVector(vectorMinus(path[pathPlace-1],path[(pathPlace--)],inputArray,arraySize++)
+		//currentVector = path[pathPLace];
+		//nextVector = path[pathPLace--];
+		//enqueueVector(vectorMinus(nextVector,currentVector),inputArray,arraySize++);
+		//commandVec =vectorPlus(vectorMinus(nextVector,currentVector,commandVec);
+		if(currentVector.x > nextVector){
+			odometryHeading = odometryHeading + vectorAngleBetween(currentVector, nextVector) + 180;
+		}else odometryHeading = odometryHeading + vectorAngleBetween(currentVector, nextVector);
+		
+		//pathPLace--;
 	}
+	timeStepArray[1].sensorReading.vector = commandVec;
+	timeStepArray[0].sensorReading.odometryHeading = odometryHeading;
 	return arraySize;
 }
 
