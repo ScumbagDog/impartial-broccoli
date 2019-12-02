@@ -45,9 +45,6 @@ void nextMove(sensorReading currentSensorReading,vec2 &inputArray[], int arraySi
 	expandPath();
 	schedulePartOfPath(inputArray, arraySize);
 }
-task main(){
-
-}
 void expandPath(){
 	state bestState = findBestState(timeStepArray[1]);
 	//findRoute(bestState.x,bestState.y,path[pathPLace].x,path[pathPlace].y);
