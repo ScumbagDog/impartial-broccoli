@@ -1,5 +1,6 @@
 //Remember to compile with the -EF flags, else enhanced firmware functions won't be defined
 #include "movement.nxc"
+#include "exceptionHandler.nxc"
 #include "vectorQueue.nxc"
 #define VECTOR_QUEUE_SIZE 10
 

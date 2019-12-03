@@ -19,6 +19,7 @@ task releaseMotors();
 vec2 currentMovementVector;
 int sharedDegreesToTurn;
 int releaseMotorCallCount;
+bool isMovingForward;
 
 mutex moveVectorMutex;
 mutex sharedDegreeMutex;
@@ -61,6 +62,8 @@ void rotate(vec2 moveVector){
   Release(sharedDegreeMutex);
 
   Acquire(rotationMutex);
+  ResetTachoCount(OUT_A);
+  ResetTachoCount(OUT_B);
   StartTask(turnWithMotorA);
   StartTask(turnWithMotorB);
 }
@@ -92,6 +95,7 @@ void driveStraight(float vectorUnitsToDrive){
   int degreesToDrive = round(DEGREES_PER_CIRCLE * fullRotationsToDrive);
   RotateMotor(OUT_AB, MAX_MOTORPOWER, degreesToDrive);
   RotateMotor(OUT_AB, 0, 0); //This is to block the currentMovementVector-update until the robot has driven the entire stretch
+                             //Maybe it should just be remade, it isn't very pretty
   Acquire(moveVectorMutex);
     currentMovementVector.x = 0;
     currentMovementVector.y = 0;
