@@ -42,12 +42,8 @@ void movement(){
 void move(vec2 moveVector){
   if(!floatEquals(moveVector.x, 0) || sign(moveVector.y) < 0){
     rotate(moveVector);
-    Acquire(rotationMutex);
-    Release(rotationMutex);
-    moveVector.y = vectorMag(moveVector);
-    moveVector.x = 0;
   }
-  driveStraight(moveVector.y);
+  driveStraight(vectorMag(moveVector));
 }
 
 void rotate(vec2 moveVector){
