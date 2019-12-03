@@ -8,24 +8,22 @@ bool isSuddenObject;
 
 mutex objectDetectionMutex;
 
-task HandleExceptions(){
-  while(true){
-    if(isMovingForward){
-	    if(objectWithinMinRange){
-	      if(isSuddenObject){
-	        long startTime = CurrentTick();
-	        Off(OUT_AB);
-	        long timeWaited = startTime;
-	        while(timeWaited - startTime < OBJECT_TIMEOUT && objectWithinMinRange){
-	          timeWaited = CurrentTick();
-	          Yield();
-	        }
-	        OnFwd(OUT_AB, MAX_MOTORPOWER);
-	      }else{
-	        //code to update map and plot route here.
-	      }
-	    }
-	  }
+void HandleExceptions(){
+  if(isMovingForward){
+    if(objectWithinMinRange){
+      if(isSuddenObject){
+        long startTime = CurrentTick();
+        Off(OUT_AB);
+        long timeWaited = startTime;
+        while(timeWaited - startTime < OBJECT_TIMEOUT){
+          timeWaited = CurrentTick();
+          Yield();
+        }
+        OnFwd(OUT_AB, MAX_MOTORPOWER);
+      }else{
+        //code to update map and plot route here.
+      }
+    }
   }
 }
 #endif
