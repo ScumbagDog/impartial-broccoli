@@ -1,0 +1,65 @@
+#include "quickMaffs.nxc"
+#include "vectors.nxc"
+#include "MonteCarlo.nxc"
+#include "movement.nxc"
+#include "vectorQueue.nxc"
+#define START_X 2
+#define START_Y 2
+#define START_HEADING 0
+#define VECTORS_TO_SCHEDUEL 3
+timeStep timeStepArray[2];
+void initiateTimeStep();
+void firstMove(int startx, int starty, int endx, int endy, vec2 &inputArray[],int arraySize);
+void nextMove(sensorReading currentSensorReading,vec2 &inputArray[], int arraySize);
+void expandPath();
+int schedulePartOfPath(vec2 &inputArray[], int arraySize);
+void newTimeStep(sensorReading currentSensorReading);
+
+void initiateTimeStep(){
+	timeStep timeStep0;
+	state probState;
+	probState.x = START_X;
+	probState.y = START_Y;
+	probState.heading = START_HEADING;
+	probState.probability = 1;
+	int i;
+	for(i=0;i<SAMPLE_SIZE;i++){
+		timeStep0.probStates[i] = probState;
+	}
+	vec2 vec;
+	vec.x=0;
+	vec.y=0;
+	sensorReading sensorReading0;
+	sensorReading0.vector = vec;
+	timeStep0.sensor = sensorReading0 ;
+	timeStepArray[1] = timeStep0;
+
+}
+void firstMove(int startx, int starty, int endx, int endy, vec2 &inputArray[], int arraySize){
+	//findRoute(startx,starty,endx,endy);
+	schedulePartOfPath(inputArray, arraySize);
+}
+void nextMove(sensorReading currentSensorReading,vec2 &inputArray[], int arraySize){
+	newTimeStep(currentSensorReading);
+	expandPath();
+	schedulePartOfPath(inputArray, arraySize);
+}
+void expandPath(){
+	state bestState = findBestState(timeStepArray[1]);
+	//findRoute(bestState.x,bestState.y,path[pathPLace].x,path[pathPlace].y);
+	
+
+}
+int schedulePartOfPath(vec2 &inputArray[], int arraySize){
+	int i;
+	for(i=0;i<VECTORS_TO_SCHEDUEL;i++){
+		//enqueueVector(vectorMinus(path[pathPlace-1],path[(pathPlace--)],inputArray,arraySize++)
+	}
+	return arraySize;
+}
+
+void newTimeStep(sensorReading currentSensorReading){
+	timeStepArray[0] = timeStepArray[1];
+	timeStep currentTimeStep =	monteCarlo(currentSensorReading,timeStepArray[0]);
+	timeStepArray[1] = currentTimeStep;
+}
