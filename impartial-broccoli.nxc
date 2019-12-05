@@ -25,8 +25,8 @@ task main() {
   SetSensorTouch(IN_2);
   initQueue(moveVectorQueue, VECTOR_QUEUE_SIZE);
   vec2 test;
-  test.x = 1;
-  test.y = 0;
+  test.x = 0;
+  test.y = -1;
   enqueueVector(test, moveVectorQueue, VECTOR_QUEUE_SIZE);
   enqueueVector(test, moveVectorQueue, VECTOR_QUEUE_SIZE);
   enqueueVector(test, moveVectorQueue, VECTOR_QUEUE_SIZE);

@@ -4,7 +4,7 @@
 #define WHEEL_CIRCUMFERENCE WHEEL_DIAMETER * PI
 #define ROBOT_WIDTH 10
 #define CM_TO_VECTORUNIT 100
-#define MAX_MOTORPOWER 80
+#define MAX_MOTORPOWER 50
 #include "vectors.nxc"
 #include "quickMaffs.nxc"
 
@@ -89,7 +89,7 @@ void driveStraight(float vectorUnitsToDrive){
 
   float fullRotationsToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / WHEEL_CIRCUMFERENCE) / 10; //don't remove 10. for some reason it adds a factor 10 too much
   int degreesToDrive = round(DEGREES_PER_CIRCLE * fullRotationsToDrive);
-  RotateMotor(OUT_AB, MAX_MOTORPOWER, degreesToDrive);
+  RotateMotor(OUT_AB, -MAX_MOTORPOWER, degreesToDrive);
   RotateMotor(OUT_AB, 0, 0); //This is to block the currentMovementVector-update until the robot has driven the entire stretch
                              //Maybe it should just be remade, it isn't very pretty
   Acquire(moveVectorMutex);
