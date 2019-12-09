@@ -1,10 +1,10 @@
 #ifndef MOVE_IS_COMPILED
 #define MOVE_IS_COMPILED 1
-#define WHEEL_DIAMETER 4.5
+#define WHEEL_DIAMETER 5.5
 #define WHEEL_CIRCUMFERENCE WHEEL_DIAMETER * PI
-#define ROBOT_WIDTH 10
+#define ROBOT_WIDTH 11.27
 #define CM_TO_VECTORUNIT 100
-#define MAX_MOTORPOWER 80
+#define MAX_MOTORPOWER 70
 #include "vectors.nxc"
 #include "quickMaffs.nxc"
 
@@ -31,7 +31,7 @@ void moveAhead(float vectorUnitsToDrive){
   long degreesToDrive = round(DEGREES_PER_CIRCLE * fullRotationsToDrive);
   long tachoDegreesDriven = 0;
   
-  OnFwdEx(OUT_AB, MAX_MOTORPOWER, RESET_ALL); //*burde* virke med OUT_AB, men hvis ikke, så gør det i hvert sit kald
+  OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, 0, RESET_ALL); //*burde* virke med OUT_AB, men hvis ikke, så gør det i hvert sit kald
   while(tachoDegreesDriven < degreesToDrive){
     tachoDegreesDriven = MotorTachoCount(OUT_A);
   }
@@ -57,7 +57,6 @@ void initiateMovement(vec2 moveVector){
     moveVector.y = vectorMag(moveVector);
     moveVector.x = 0;
   }
-  driveStraight(moveVector.y);
 }
 
 void rotate(vec2 moveVector){
@@ -71,50 +70,14 @@ void rotate(vec2 moveVector){
   sharedDegreesToTurn = degreesToTurnWheels;
   Release(sharedDegreeMutex);
 
-  Acquire(rotationMutex);
-  StartTask(turnWithMotorA);
-  StartTask(turnWithMotorB);
-  
-  Acquire(rotationMutex); //this is to wait for motors to finish rotating before exiting.
-  Release(rotationMutex);
-}
-
-task turnWithMotorA(){
-  RotateMotor(OUT_A, MAX_MOTORPOWER, -(sharedDegreesToTurn));
-  ExitTo(releaseMotors);
-}
-task turnWithMotorB(){
-  RotateMotor(OUT_B, MAX_MOTORPOWER, (sharedDegreesToTurn));
-  ExitTo(releaseMotors);
-}
-task releaseMotors(){
-  Acquire(countMutex);
-  if(releaseMotorCallCount == 0){ //If only one motor is done, increment
-    releaseMotorCallCount++;
-    Release(countMutex);
-  }else{  //if both are done, release the mutex and reset count
-    Release(rotationMutex);
-    releaseMotorCallCount = 0;
-    Release(countMutex);
-  }
-}
-
-void driveStraight(float vectorUnitsToDrive){
-  //This could be optimized more, but this is more readable
-
-  float fullRotationsToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / WHEEL_CIRCUMFERENCE) / 10; //don't remove 10. for some reason it adds a factor 10 too much
-  long degreesToDrive = round(DEGREES_PER_CIRCLE * fullRotationsToDrive);
   long tachoDegreesDriven = 0;
   
-  while(tachoDegreesDriven < degreesToDrive){
-  
+  OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, 100, RESET_ALL);
+  while(tachoDegreesDriven < degreesToTurnWheels){
+    tachoDegreesDriven = MotorTachoCount(OUT_A) > MotorTachoCount(OUT_B) ? MotorTachoCount(OUT_A) : MotorTachoCount(OUT_B);
+    //Make some code for compass
   }
-  //RotateMotor(OUT_AB, MAX_MOTORPOWER, degreesToDrive);
-  //RotateMotor(OUT_AB, 0, 0); //This is to block the currentMovementVector-update until the robot has driven the entire stretch
-  Acquire(moveVectorMutex);
-    currentMovementVector.x = 0;
-    currentMovementVector.y = 0;
-  Release(moveVectorMutex);
+  Off(OUT_AB);
 }
 
 float getRadiansToTurn(vec2 moveVector){

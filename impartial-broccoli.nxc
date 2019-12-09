@@ -18,12 +18,13 @@ task main() {
   initQueue(moveVectorQueue, VECTOR_QUEUE_SIZE);
   vec2 test;
   test.x = 0;
+  test.y = 1;
+  enqueueVector(test, moveVectorQueue, VECTOR_QUEUE_SIZE);
+  moveAhead(test);
   test.y = -1;
-  enqueueVector(test, moveVectorQueue, VECTOR_QUEUE_SIZE);
-  enqueueVector(test, moveVectorQueue, VECTOR_QUEUE_SIZE);
-  enqueueVector(test, moveVectorQueue, VECTOR_QUEUE_SIZE);
-  enqueueVector(test, moveVectorQueue, VECTOR_QUEUE_SIZE);
-  Precedes(schedule);
+  rotate(test);
+  moveAhead(test);
+  //Precedes(schedule);
 }
 
 task schedule(){
