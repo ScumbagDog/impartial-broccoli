@@ -1,13 +1,9 @@
 //Remember to compile with the -EF flags, else enhanced firmware functions won't be defined
 #include "movement.nxc"
-#include "exceptionHandler.nxc"
 #include "vectorQueue.nxc"
 #define VECTOR_QUEUE_SIZE 10
 
 task schedule();
-void touchSensorRead();
-void writeToDisplay();
-void angleSensorRead();
 void updateMoveVector();
 
 int cycleCount = 0;
@@ -15,10 +11,6 @@ unsigned int touchSensorOutput = 0;
 int angleSensorOutput = 0;
 
 vec2 moveVectorQueue[VECTOR_QUEUE_SIZE];
-
-mutex touchSensorMutex;
-mutex angleSensorMutex;
-mutex cycleCountMutex;
 
 task main() {
   SetSensorLowspeed(IN_1);
@@ -36,12 +28,10 @@ task main() {
 
 task schedule(){
   while(true){
-    movement();
+    //movement();
+    moveAhead(vectorMag(currentMovementVector));
+    currentMovementVector = getNullVector();
     updateMoveVector();
-
-    Acquire(cycleCountMutex);
-    cycleCount++;
-    Release(cycleCountMutex);
   }
 }
 
@@ -51,27 +41,4 @@ void updateMoveVector(){
       currentMovementVector = dequeueVector(moveVectorQueue, VECTOR_QUEUE_SIZE);
     Release(moveVectorMutex);
   }
-}
-
-void touchSensorRead(){
-  Acquire(touchSensorMutex);
-  touchSensorOutput = SENSOR_1;
-  Release(touchSensorMutex);
-}
-
-void angleSensorRead(){
-  Acquire(angleSensorMutex);
-  angleSensorOutput = SENSOR_2;
-  Release(angleSensorMutex);
-}
-
-void writeToDisplay(){
-  Acquire(touchSensorMutex);
-  NumOut(0, LCD_LINE1, touchSensorOutput);
-  touchSensorOutput = 0;
-  Release(touchSensorMutex);
-
-  Acquire(cycleCountMutex);
-  NumOut(0, LCD_LINE3, cycleCount);
-  Release(cycleCountMutex);
 }

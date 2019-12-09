@@ -12,6 +12,7 @@ void move(vec2 moveVector);
 void rotate(vec2 moveVector);
 void driveStraight(float vectorUnitsToDrive);
 float getRadiansToTurn(vec2 moveVector);
+void initiateMovement(vec2 moveVector);
 task turnWithMotorA();
 task turnWithMotorB();
 task releaseMotors();
@@ -24,6 +25,18 @@ mutex moveVectorMutex;
 mutex sharedDegreeMutex;
 mutex rotationMutex;
 mutex countMutex;
+
+void moveAhead(float vectorUnitsToDrive){
+  float fullRotationsToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / WHEEL_CIRCUMFERENCE) / 10; //don't remove 10. for some reason it adds a factor 10 too much
+  long degreesToDrive = round(DEGREES_PER_CIRCLE * fullRotationsToDrive);
+  long tachoDegreesDriven = 0;
+  
+  OnFwdEx(OUT_AB, MAX_MOTORPOWER, RESET_ALL); //*burde* virke med OUT_AB, men hvis ikke, så gør det i hvert sit kald
+  while(tachoDegreesDriven < degreesToDrive){
+    tachoDegreesDriven = MotorTachoCount(OUT_A);
+  }
+  Off(OUT_AB);
+}
 
 void movement(){
   Acquire(moveVectorMutex);
