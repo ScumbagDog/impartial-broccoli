@@ -4,7 +4,7 @@
 #define WHEEL_CIRCUMFERENCE WHEEL_DIAMETER * PI
 #define ROBOT_WIDTH 10
 #define CM_TO_VECTORUNIT 100
-#define MAX_MOTORPOWER 50
+#define MAX_MOTORPOWER 80
 #include "vectors.nxc"
 #include "quickMaffs.nxc"
 
@@ -19,7 +19,6 @@ task releaseMotors();
 vec2 currentMovementVector;
 int sharedDegreesToTurn;
 int releaseMotorCallCount;
-bool isMovingForward;
 
 mutex moveVectorMutex;
 mutex sharedDegreeMutex;
@@ -32,18 +31,20 @@ void movement(){
     //If current vector isn't a nul-vektor
     vec2 moveVectorSnapshot = currentMovementVector;
     Release(moveVectorMutex);
-    move(moveVectorSnapshot);
+    initiateMovement(moveVectorSnapshot);
   }
   else{
     Release(moveVectorMutex);
   }
 }
 
-void move(vec2 moveVector){
+void initiateMovement(vec2 moveVector){
   if(!floatEquals(moveVector.x, 0) || sign(moveVector.y) < 0){
     rotate(moveVector);
+    moveVector.y = vectorMag(moveVector);
+    moveVector.x = 0;
   }
-  driveStraight(vectorMag(moveVector));
+  driveStraight(moveVector.y);
 }
 
 void rotate(vec2 moveVector){
@@ -58,10 +59,11 @@ void rotate(vec2 moveVector){
   Release(sharedDegreeMutex);
 
   Acquire(rotationMutex);
-  ResetTachoCount(OUT_A);
-  ResetTachoCount(OUT_B);
   StartTask(turnWithMotorA);
   StartTask(turnWithMotorB);
+  
+  Acquire(rotationMutex); //this is to wait for motors to finish rotating before exiting.
+  Release(rotationMutex);
 }
 
 task turnWithMotorA(){
@@ -88,10 +90,14 @@ void driveStraight(float vectorUnitsToDrive){
   //This could be optimized more, but this is more readable
 
   float fullRotationsToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / WHEEL_CIRCUMFERENCE) / 10; //don't remove 10. for some reason it adds a factor 10 too much
-  int degreesToDrive = round(DEGREES_PER_CIRCLE * fullRotationsToDrive);
-  RotateMotor(OUT_AB, -MAX_MOTORPOWER, degreesToDrive);
-  RotateMotor(OUT_AB, 0, 0); //This is to block the currentMovementVector-update until the robot has driven the entire stretch
-                             //Maybe it should just be remade, it isn't very pretty
+  long degreesToDrive = round(DEGREES_PER_CIRCLE * fullRotationsToDrive);
+  long tachoDegreesDriven = 0;
+  
+  while(tachoDegreesDriven < degreesToDrive){
+  
+  }
+  //RotateMotor(OUT_AB, MAX_MOTORPOWER, degreesToDrive);
+  //RotateMotor(OUT_AB, 0, 0); //This is to block the currentMovementVector-update until the robot has driven the entire stretch
   Acquire(moveVectorMutex);
     currentMovementVector.x = 0;
     currentMovementVector.y = 0;
