@@ -34,6 +34,7 @@ void moveAhead(float vectorUnitsToDrive){
   OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, 0, RESET_ALL); //*burde* virke med OUT_AB, men hvis ikke, så gør det i hvert sit kald
   while(tachoDegreesDriven < degreesToDrive){
     tachoDegreesDriven = MotorTachoCount(OUT_A);
+    
   }
   Off(OUT_AB);
 }

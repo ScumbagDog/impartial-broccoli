@@ -20,16 +20,11 @@ task main() {
   test.x = 0;
   test.y = 1;
   enqueueVector(test, moveVectorQueue, VECTOR_QUEUE_SIZE);
-  moveAhead(test);
-  test.y = -1;
-  rotate(test);
-  moveAhead(test);
-  //Precedes(schedule);
+  Precedes(schedule);
 }
 
 task schedule(){
   while(true){
-    //movement();
     moveAhead(vectorMag(currentMovementVector));
     currentMovementVector = getNullVector();
     updateMoveVector();
