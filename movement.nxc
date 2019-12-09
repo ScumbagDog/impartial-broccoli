@@ -5,6 +5,8 @@
 #define ROBOT_WIDTH 11.27
 #define CM_TO_VECTORUNIT 100
 #define MAX_MOTORPOWER 70
+#define MAX_WAIT_TIME 1000
+#define OBSTACLE_MIN_RANGE 20
 #include "vectors.nxc"
 #include "quickMaffs.nxc"
 
@@ -20,6 +22,7 @@ task releaseMotors();
 vec2 currentMovementVector;
 int sharedDegreesToTurn;
 int releaseMotorCallCount;
+bool emergencyBrakePanic;
 
 mutex moveVectorMutex;
 mutex sharedDegreeMutex;
@@ -30,13 +33,49 @@ void moveAhead(float vectorUnitsToDrive){
   float fullRotationsToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / WHEEL_CIRCUMFERENCE) / 10; //don't remove 10. for some reason it adds a factor 10 too much
   long degreesToDrive = round(DEGREES_PER_CIRCLE * fullRotationsToDrive);
   long tachoDegreesDriven = 0;
+  SetSensorUltrasonic(IN_4);
+  emergencyBrakeTriggered = false;
   
   OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, 0, RESET_ALL); //*burde* virke med OUT_AB, men hvis ikke, så gør det i hvert sit kald
   while(tachoDegreesDriven < degreesToDrive){
     tachoDegreesDriven = MotorTachoCount(OUT_A);
-    
+    byte sensorReading = SensorUS(IN_4);
+    if(sensorReading <= OBSTACLE_MIN_RANGE){
+      emergencyBrake();
+      if(emergencyBrakePanic){
+        break;
+      }
+    }
   }
   Off(OUT_AB);
+}
+
+void emergencyBrake(){
+  Off(OUT_AB);
+  short cycleCount = 0;
+  byte hasObstacle = true;
+  while(hasObstacle && cycleCount < 4){
+    waitState(hasObstacle);
+    cycleCount++;
+  }
+  if(cycleCount >= 4){
+    emergencyBrakePanic = true;
+  }
+  else{
+    OnFwdSync(OUT_AB, MAX_MOTORPOWER, 0);
+  }
+}
+
+void waitState(bool &hasObstacle){
+  long entryTick = CurrentTick();
+  long currentTick = entryTick;
+  while(entryTick - currentTick < MAX_WAIT_TIME){
+    currentTick = CurrentTick();
+    byte sensorReading = SensorUS(IN_4);
+    if(sensorReading > OBSTACLE_MIN_RANGE){
+      hasObstacle = false;
+    }
+  }
 }
 
 void movement(){
