@@ -20,19 +20,22 @@ task main() {
   test.x = 0;
   test.y = 1;
   enqueueVector(test, moveVectorQueue, VECTOR_QUEUE_SIZE);
-  moveAhead(test.y);
+  float actualDistanceDriven;
+  moveAhead(test.y, actualDistanceDriven);
+  /*
   test.y = -1;
   rotate(test);
   test.y = 1;
   moveAhead(test.y);
   test.y = -1;
   rotate(test);
+  */
   //Precedes(schedule);
 }
 
 task schedule(){
   while(true){
-    moveAhead(vectorMag(currentMovementVector));
+    //moveAhead(vectorMag(currentMovementVector));
     currentMovementVector = getNullVector();
     updateMoveVector();
   }

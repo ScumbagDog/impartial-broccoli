@@ -28,8 +28,8 @@ mutex sharedDegreeMutex;
 mutex rotationMutex;
 mutex countMutex;
 
-void moveAhead(float vectorUnitsToDrive){
-  float fullRotationsToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / WHEEL_CIRCUMFERENCE) / 10; //don't remove 10. for some reason it adds a factor 10 too much
+void moveAhead(float vectorUnitsToDrive, float &vectorUnitsDriven){
+  float fullRotationsToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / (WHEEL_CIRCUMFERENCE));
   long degreesToDrive = round(DEGREES_PER_CIRCLE * fullRotationsToDrive);
   long tachoDegreesDriven = 0;
   SetSensorUltrasonic(IN_4);
@@ -38,7 +38,6 @@ void moveAhead(float vectorUnitsToDrive){
   OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, 0, RESET_ALL); //*burde* virke med OUT_AB, men hvis ikke, så gør det i hvert sit kald
   while(tachoDegreesDriven < degreesToDrive){
     tachoDegreesDriven = MotorTachoCount(OUT_A);
-    NumOut(0, LCD_LINE8, tachoDegreesDriven);
     byte sensorReading = SensorUS(IN_4);
     if(sensorReading <= OBSTACLE_MIN_RANGE){
       emergencyBrake();
@@ -48,6 +47,8 @@ void moveAhead(float vectorUnitsToDrive){
     }
   }
   Off(OUT_AB);
+  float tacofloat = tachoDegreesDriven;
+  vectorUnitsDriven = (tacofloat / DEGREES_PER_CIRCLE * (WHEEL_CIRCUMFERENCE) /CM_TO_VECTORUNIT);
 }
 
 void emergencyBrake(){

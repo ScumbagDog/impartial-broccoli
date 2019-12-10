@@ -9,7 +9,7 @@ int floatEquals(float a, float b){
 }
 
 int round(float a){
-  return a < floor(a + 0.5) ? a : a + 1;
+  return a < floor(a) + 0.5 ? a : a + 1;
 }
 
 float radToDeg(float rad){
@@ -20,4 +20,9 @@ float degToRad(float deg){
   return deg / (180 * PI);
 }
 
+float intDiv(int a, int b){
+  float a_f = a;
+  float b_f = b;
+  return a_f / b_f;
+}
 #endif
