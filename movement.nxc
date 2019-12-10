@@ -6,18 +6,17 @@
 #define CM_TO_VECTORUNIT 100
 #define MAX_MOTORPOWER 70
 #define MAX_WAIT_TIME 1000
-#define OBSTACLE_MIN_RANGE 20
+#define OBSTACLE_MIN_RANGE 30
 #include "vectors.nxc"
 #include "quickMaffs.nxc"
 
 void move(vec2 moveVector);
 void rotate(vec2 moveVector);
-void driveStraight(float vectorUnitsToDrive);
 float getRadiansToTurn(vec2 moveVector);
 void initiateMovement(vec2 moveVector);
-task turnWithMotorA();
-task turnWithMotorB();
-task releaseMotors();
+void emergencyBrake();
+void waitState(bool &hasObstacle);
+
 
 vec2 currentMovementVector;
 int sharedDegreesToTurn;
@@ -34,11 +33,12 @@ void moveAhead(float vectorUnitsToDrive){
   long degreesToDrive = round(DEGREES_PER_CIRCLE * fullRotationsToDrive);
   long tachoDegreesDriven = 0;
   SetSensorUltrasonic(IN_4);
-  emergencyBrakeTriggered = false;
+  emergencyBrakePanic = false;
   
   OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, 0, RESET_ALL); //*burde* virke med OUT_AB, men hvis ikke, så gør det i hvert sit kald
   while(tachoDegreesDriven < degreesToDrive){
     tachoDegreesDriven = MotorTachoCount(OUT_A);
+    NumOut(0, LCD_LINE8, tachoDegreesDriven);
     byte sensorReading = SensorUS(IN_4);
     if(sensorReading <= OBSTACLE_MIN_RANGE){
       emergencyBrake();
@@ -51,7 +51,7 @@ void moveAhead(float vectorUnitsToDrive){
 }
 
 void emergencyBrake(){
-  Off(OUT_AB);
+  OffEx(OUT_AB, RESET_NONE);
   short cycleCount = 0;
   byte hasObstacle = true;
   while(hasObstacle && cycleCount < 4){
@@ -62,14 +62,14 @@ void emergencyBrake(){
     emergencyBrakePanic = true;
   }
   else{
-    OnFwdSync(OUT_AB, MAX_MOTORPOWER, 0);
+    OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, 0, RESET_NONE);
   }
 }
 
 void waitState(bool &hasObstacle){
   long entryTick = CurrentTick();
   long currentTick = entryTick;
-  while(entryTick - currentTick < MAX_WAIT_TIME){
+  while(currentTick - entryTick < MAX_WAIT_TIME){
     currentTick = CurrentTick();
     byte sensorReading = SensorUS(IN_4);
     if(sensorReading > OBSTACLE_MIN_RANGE){

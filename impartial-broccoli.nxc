@@ -20,7 +20,14 @@ task main() {
   test.x = 0;
   test.y = 1;
   enqueueVector(test, moveVectorQueue, VECTOR_QUEUE_SIZE);
-  Precedes(schedule);
+  moveAhead(test.y);
+  test.y = -1;
+  rotate(test);
+  test.y = 1;
+  moveAhead(test.y);
+  test.y = -1;
+  rotate(test);
+  //Precedes(schedule);
 }
 
 task schedule(){
