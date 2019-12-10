@@ -1,0 +1,81 @@
+#define FILE_NAME "test_results.txt"
+#define FILE_SIZE 10000
+
+
+#define SENSOR_US_SPEED 15
+#define ULTRASONIC_PORT IN_4
+#define ROTATION_AMOUNT_DEGREE 5
+int results = 0;
+bool rotating = false;
+int current_tacho = 0;
+
+byte handle = 0;
+
+void open_for_write();
+
+void rotateSensorMotor();
+task tachoDisplay();
+task rotate();
+void rotateRight();
+void rotateLeft();
+void rotateRightWithFalse();
+
+task main() {
+   open_for_write();
+   rotateSensorMotor();
+}
+
+void open_for_write(){
+  unsigned int file_size = FILE_SIZE;
+  handle = 0;
+  DeleteFile("test_results.txt");
+  CreateFile(FILE_NAME, file_size, handle);
+}
+
+
+void rotateSensorMotor() {
+   rotating = true;
+   StartTask(rotate);
+   StartTask(tachoDisplay);
+}
+
+task tachoDisplay() {
+   int i = 0;
+   while(rotating == true){
+      current_tacho = MotorTachoCount(OUT_C);
+	  if(current_tacho % 5 == 0){
+	  	NumOut(0, LCD_LINE2, current_tacho);
+	    string tacho_to_file = NumToStr(current_tacho);
+	    Write(handle, tacho_to_file);
+		  Write(handle, "     ");
+		  SetSensorUltrasonic(ULTRASONIC_PORT);
+      results = SensorUS(ULTRASONIC_PORT);
+      NumOut(0, LCD_LINE1, results);
+		  string ultra_to_file = NumToStr(results);
+		  WriteLn(handle, ultra_to_file);
+	  }
+    }
+	CloseFile(handle);
+}
+
+task rotate(){
+   rotateRight();
+   //Wait(2000);
+   rotateLeft();
+   //Wait(2000);
+   rotateRightWithFalse();
+   //Wait(2000);
+}
+
+// 90 grader
+void rotateRight(){
+   RotateMotor(OUT_C, SENSOR_US_SPEED, 90);
+}
+// -180 grader
+void rotateLeft(){
+   RotateMotor(OUT_C, -SENSOR_US_SPEED, 180);
+}
+void rotateRightWithFalse(){
+   RotateMotor(OUT_C, SENSOR_US_SPEED, 90);
+   rotating = false;
+}

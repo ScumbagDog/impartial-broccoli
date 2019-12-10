@@ -1,52 +1,73 @@
 #ifndef MOVE_IS_COMPILED
 #define MOVE_IS_COMPILED 1
-#define WHEEL_DIAMETER 4.5
+#define WHEEL_DIAMETER 5.5
 #define WHEEL_CIRCUMFERENCE WHEEL_DIAMETER * PI
-#define ROBOT_WIDTH 10
+#define ROBOT_WIDTH 11.27
 #define CM_TO_VECTORUNIT 100
-#define MAX_MOTORPOWER 80
+#define MAX_MOTORPOWER 70
+#define MAX_WAIT_TIME 1000
+#define OBSTACLE_MIN_RANGE 30
 #include "vectors.nxc"
 #include "quickMaffs.nxc"
 
-void move(vec2 moveVector);
 void rotate(vec2 moveVector);
-void driveStraight(float vectorUnitsToDrive);
 float getRadiansToTurn(vec2 moveVector);
-task turnWithMotorA();
-task turnWithMotorB();
-task releaseMotors();
+void emergencyBrake();
+void waitState(bool &hasObstacle);
 
-vec2 currentMovementVector;
 int sharedDegreesToTurn;
 int releaseMotorCallCount;
+bool emergencyBrakePanic;
 
-mutex moveVectorMutex;
-mutex sharedDegreeMutex;
-mutex rotationMutex;
-mutex countMutex;
+void moveAhead(float vectorUnitsToDrive, float &vectorUnitsDriven){
+  float fullRotationsToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / (WHEEL_CIRCUMFERENCE));
+  long degreesToDrive = round(DEGREES_PER_CIRCLE * fullRotationsToDrive);
+  long tachoDegreesDriven = 0;
+  SetSensorUltrasonic(IN_4);
+  emergencyBrakePanic = false;
+  
+  OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, 0, RESET_ALL); //*burde* virke med OUT_AB, men hvis ikke, så gør det i hvert sit kald
+  while(tachoDegreesDriven < degreesToDrive){
+    tachoDegreesDriven = MotorTachoCount(OUT_A);
+    byte sensorReading = SensorUS(IN_4);
+    if(sensorReading <= OBSTACLE_MIN_RANGE){
+      emergencyBrake();
+      if(emergencyBrakePanic){
+        break;
+      }
+    }
+  }
+  Off(OUT_AB);
+  float tacofloat = tachoDegreesDriven;
+  vectorUnitsDriven = (tacofloat / DEGREES_PER_CIRCLE * (WHEEL_CIRCUMFERENCE) /CM_TO_VECTORUNIT);
+}
 
-void movement(){
-  Acquire(moveVectorMutex);
-  if(!floatEquals(vectorMag(currentMovementVector), 0)){
-    //If current vector isn't a nul-vektor
-    vec2 moveVectorSnapshot = currentMovementVector;
-    Release(moveVectorMutex);
-    move(moveVectorSnapshot);
+void emergencyBrake(){
+  OffEx(OUT_AB, RESET_NONE);
+  short cycleCount = 0;
+  byte hasObstacle = true;
+  while(hasObstacle && cycleCount < 4){
+    waitState(hasObstacle);
+    cycleCount++;
+  }
+  if(cycleCount >= 4){
+    emergencyBrakePanic = true;
   }
   else{
-    Release(moveVectorMutex);
+    OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, 0, RESET_NONE);
   }
 }
 
-void move(vec2 moveVector){
-  if(!floatEquals(moveVector.x, 0) || sign(moveVector.y) < 0){
-    rotate(moveVector);
-    Acquire(rotationMutex);
-    Release(rotationMutex);
-    moveVector.y = vectorMag(moveVector);
-    moveVector.x = 0;
+void waitState(bool &hasObstacle){
+  long entryTick = CurrentTick();
+  long currentTick = entryTick;
+  while(currentTick - entryTick < MAX_WAIT_TIME){
+    currentTick = CurrentTick();
+    byte sensorReading = SensorUS(IN_4);
+    if(sensorReading > OBSTACLE_MIN_RANGE){
+      hasObstacle = false;
+    }
   }
-  driveStraight(moveVector.y);
 }
 
 void rotate(vec2 moveVector){
@@ -56,46 +77,14 @@ void rotate(vec2 moveVector){
   float radiansToTurnWheels = distanceToTurnWheels / (WHEEL_DIAMETER / 2);
   int degreesToTurnWheels = round(radToDeg(radiansToTurnWheels)); //if the robot doesn't turn properly, change this line
 
-  Acquire(sharedDegreeMutex);
-  sharedDegreesToTurn = degreesToTurnWheels;
-  Release(sharedDegreeMutex);
-
-  Acquire(rotationMutex);
-  StartTask(turnWithMotorA);
-  StartTask(turnWithMotorB);
-}
-
-task turnWithMotorA(){
-  RotateMotor(OUT_A, MAX_MOTORPOWER, -(sharedDegreesToTurn));
-  ExitTo(releaseMotors);
-}
-task turnWithMotorB(){
-  RotateMotor(OUT_B, MAX_MOTORPOWER, (sharedDegreesToTurn));
-  ExitTo(releaseMotors);
-}
-task releaseMotors(){
-  Acquire(countMutex);
-  if(releaseMotorCallCount == 0){ //If only one motor is done, increment
-    releaseMotorCallCount++;
-    Release(countMutex);
-  }else{  //if both are done, release the mutex and reset count
-    Release(rotationMutex);
-    releaseMotorCallCount = 0;
-    Release(countMutex);
+  long tachoDegreesDriven = 0;
+  
+  OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, 100, RESET_ALL);
+  while(tachoDegreesDriven < degreesToTurnWheels){
+    tachoDegreesDriven = MotorTachoCount(OUT_A) > MotorTachoCount(OUT_B) ? MotorTachoCount(OUT_A) : MotorTachoCount(OUT_B);
+    //Make some code for compass
   }
-}
-
-void driveStraight(float vectorUnitsToDrive){
-  //This could be optimized more, but this is more readable
-
-  float fullRotationsToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / WHEEL_CIRCUMFERENCE) / 10; //don't remove 10. for some reason it adds a factor 10 too much
-  int degreesToDrive = round(DEGREES_PER_CIRCLE * fullRotationsToDrive);
-  RotateMotor(OUT_AB, MAX_MOTORPOWER, degreesToDrive);
-  RotateMotor(OUT_AB, 0, 0); //This is to block the currentMovementVector-update until the robot has driven the entire stretch
-  Acquire(moveVectorMutex);
-    currentMovementVector.x = 0;
-    currentMovementVector.y = 0;
-  Release(moveVectorMutex);
+  Off(OUT_AB);
 }
 
 float getRadiansToTurn(vec2 moveVector){
