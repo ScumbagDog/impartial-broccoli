@@ -10,23 +10,14 @@
 #include "vectors.nxc"
 #include "quickMaffs.nxc"
 
-void move(vec2 moveVector);
 void rotate(vec2 moveVector);
 float getRadiansToTurn(vec2 moveVector);
-void initiateMovement(vec2 moveVector);
 void emergencyBrake();
 void waitState(bool &hasObstacle);
 
-
-vec2 currentMovementVector;
 int sharedDegreesToTurn;
 int releaseMotorCallCount;
 bool emergencyBrakePanic;
-
-mutex moveVectorMutex;
-mutex sharedDegreeMutex;
-mutex rotationMutex;
-mutex countMutex;
 
 void moveAhead(float vectorUnitsToDrive, float &vectorUnitsDriven){
   float fullRotationsToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / (WHEEL_CIRCUMFERENCE));
@@ -79,37 +70,12 @@ void waitState(bool &hasObstacle){
   }
 }
 
-void movement(){
-  Acquire(moveVectorMutex);
-  if(!floatEquals(vectorMag(currentMovementVector), 0)){
-    //If current vector isn't a nul-vektor
-    vec2 moveVectorSnapshot = currentMovementVector;
-    Release(moveVectorMutex);
-    initiateMovement(moveVectorSnapshot);
-  }
-  else{
-    Release(moveVectorMutex);
-  }
-}
-
-void initiateMovement(vec2 moveVector){
-  if(!floatEquals(moveVector.x, 0) || sign(moveVector.y) < 0){
-    rotate(moveVector);
-    moveVector.y = vectorMag(moveVector);
-    moveVector.x = 0;
-  }
-}
-
 void rotate(vec2 moveVector){
   //do some code here that actually turns the wheels based on getRadiansToTurn
   float radiansToTurnRobot = getRadiansToTurn(moveVector);
   float distanceToTurnWheels = radiansToTurnRobot * (ROBOT_WIDTH / 2); //Robot width is the length of its radius, which is the length of one radian.
   float radiansToTurnWheels = distanceToTurnWheels / (WHEEL_DIAMETER / 2);
   int degreesToTurnWheels = round(radToDeg(radiansToTurnWheels)); //if the robot doesn't turn properly, change this line
-
-  Acquire(sharedDegreeMutex);
-  sharedDegreesToTurn = degreesToTurnWheels;
-  Release(sharedDegreeMutex);
 
   long tachoDegreesDriven = 0;
   

@@ -10,7 +10,10 @@ int cycleCount = 0;
 unsigned int touchSensorOutput = 0;
 int angleSensorOutput = 0;
 
+vec2 currentMovementVector;
 vec2 moveVectorQueue[VECTOR_QUEUE_SIZE];
+
+mutex moveVectorMutex;
 
 task main() {
   SetSensorLowspeed(IN_1);
@@ -22,20 +25,11 @@ task main() {
   enqueueVector(test, moveVectorQueue, VECTOR_QUEUE_SIZE);
   float actualDistanceDriven;
   moveAhead(test.y, actualDistanceDriven);
-  /*
-  test.y = -1;
-  rotate(test);
-  test.y = 1;
-  moveAhead(test.y);
-  test.y = -1;
-  rotate(test);
-  */
   //Precedes(schedule);
 }
 
 task schedule(){
   while(true){
-    //moveAhead(vectorMag(currentMovementVector));
     currentMovementVector = getNullVector();
     updateMoveVector();
   }
