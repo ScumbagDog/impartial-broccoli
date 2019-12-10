@@ -61,4 +61,12 @@ vec2 getNullVector(){
   return nullVec;
 }
 
+vec2 rotateVector(vec2 inputVector, int degreesToRotate){
+  vec2 outputVector;
+  float radsToRotate = degToRad(degreesToRotate);
+  outputVector.x = inputVector.x * cos(radsToRotate) - inputVector.y * sin(radsToRotate);
+  outputVector.y = inputVector.x * sin(radsToRotate) + inputVector.y * cos(radsToRotate);
+  return outputVector;
+}
+
 #endif

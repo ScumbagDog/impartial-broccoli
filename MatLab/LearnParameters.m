@@ -119,8 +119,7 @@ function n = nhit(j,z)
     %(integral((@(x) exp(-1/2*(x - j).^2/z.^2)/sqrt(2*pi*z.^2)),0,zmax)).^(-1);
 end
 function p = Phit(x,j,z)
-    global zmax;
-    if 0 <= x && x <= zmax
+    if 0 <= x && x <= 255
        p = nhit(j,z)*bigN(x,j,z);
     else
         p = 0;

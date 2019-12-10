@@ -1,42 +1,41 @@
 #include "quickMaffs.nxc"
 #include "vectors.nxc"
 #include "MonteCarlo.nxc"
-#include "movement.nxc"
 #include "vectorQueue.nxc"
 #define START_X 2
 #define START_Y 2
-#define START_HEADING 0
+#define START_HEADING 90
 #define VECTORS_TO_SCHEDUEL 3
-timeStep timeStepArray[2];
+
 void initiateTimeStep();
-void firstMove(int startx, int starty, int endx, int endy, vec2 &inputArray[],int arraySize);
+void firstMove( unsigned short goalx, unsigned short goaly, vec2 &inputArray[],int arraySize);
 void nextMove(sensorReading currentSensorReading,vec2 &inputArray[], int arraySize);
 void expandPath();
-int schedulePartOfPath(vec2 &inputArray[], int arraySize);
+void schedulePartOfPath(vec2 &inputArray[], int arraySize);
 void newTimeStep(sensorReading currentSensorReading);
 
 void initiateTimeStep(){
-	timeStep timeStep0;
+	fillMap();
 	state probState;
 	probState.x = START_X;
 	probState.y = START_Y;
 	probState.heading = START_HEADING;
 	probState.probability = 1;
 	int i;
-	for(i=0;i<SAMPLE_SIZE;i++){
-		timeStep0.probStates[i] = probState;
-	}
+	ArrayInit(timeStep1.probStates, probState, SAMPLE_SIZE);
+	ArrayInit(timeStep1.states, probState, SAMPLE_SIZE);
 	vec2 vec;
-	vec.x=0;
-	vec.y=0;
+	vec.x=START_X;
+	vec.y=START_Y;
 	sensorReading sensorReading0;
 	sensorReading0.vector = vec;
-	timeStep0.sensor = sensorReading0 ;
-	timeStepArray[1] = timeStep0;
+	sensorReading0.odometryHeading = START_HEADING;
+	timeStep1.sensor = sensorReading0;
 
 }
-void firstMove(int startx, int starty, int endx, int endy, vec2 &inputArray[], int arraySize){
-	//findRoute(startx,starty,endx,endy);
+void firstMove(unsigned short goalx, unsigned short goaly, vec2 &inputArray[], int arraySize){
+	state bestState = findBestState();
+	findRoute(bestState.x,bestState.y,goalx,goaly);
 	schedulePartOfPath(inputArray, arraySize);
 }
 void nextMove(sensorReading currentSensorReading,vec2 &inputArray[], int arraySize){
@@ -45,21 +44,51 @@ void nextMove(sensorReading currentSensorReading,vec2 &inputArray[], int arraySi
 	schedulePartOfPath(inputArray, arraySize);
 }
 void expandPath(){
-	state bestState = findBestState(timeStepArray[1]);
-	//findRoute(bestState.x,bestState.y,path[pathPLace].x,path[pathPlace].y);
+	state bestState = findBestState();
+	findRoute(bestState.x,bestState.y,path[pathStart].x,path[pathStart].y);
 	
 
 }
-int schedulePartOfPath(vec2 &inputArray[], int arraySize){
+void schedulePartOfPath(vec2 &inputArray[], int arraySize){
 	int i;
+
+	state bestState =findBestState();
+	
+	int odometryHeading1= bestState.heading;
+	vec2 commandVec;
+	commandVec.x =bestState.x;
+	commandVec.y =bestState.y;
+	
 	for(i=0;i<VECTORS_TO_SCHEDUEL;i++){
-		//enqueueVector(vectorMinus(path[pathPlace-1],path[(pathPlace--)],inputArray,arraySize++)
+		vec2 nextVector = path[pathStart];
+		vec2 enque = vectorMinus(nextVector,commandVec);
+		/*ClearScreen();
+		Wait(2000);
+		NumOut(0,LCD_LINE1,enque.x);
+		NumOut(0,LCD_LINE2,enque.y);
+		Wait(5000);*/
+		enqueueVector(rotateVector(enque,odometryHeading1-90),inputArray,arraySize);
+		commandVec =vectorPlus(enque,commandVec);
+		if(commandVec.x > nextVector.x){
+			odometryHeading1 = odometryHeading1 + vectorAngleBetween(commandVec, nextVector) + 180;
+		}else odometryHeading1 = odometryHeading1 + vectorAngleBetween(commandVec, nextVector);
 	}
-	return arraySize;
+	timeStep0 = timeStep1;
+	sensorReading newSensorReading;
+	newSensorReading.vector = commandVec;
+	newSensorReading.odometryHeading = odometryHeading1;
+	timeStep1.sensor = newSensorReading;
+	/*ClearScreen();
+	Wait(2000);
+	NumOut(0,LCD_LINE1, commandVec.x);
+	NumOut(0,LCD_LINE2, commandVec.y);
+	NumOut(0,LCD_LINE3,odometryHeading1 );
+	Wait(5000);*/
 }
 
 void newTimeStep(sensorReading currentSensorReading){
-	timeStepArray[0] = timeStepArray[1];
-	timeStep currentTimeStep =	monteCarlo(currentSensorReading,timeStepArray[0]);
-	timeStepArray[1] = currentTimeStep;
+	currentSensorReading.vector.x = timeStep1.sensor.vector.x;
+	currentSensorReading.vector.y = timeStep1.sensor.vector.y;
+	currentSensorReading.odometryHeading = timeStep1.sensor.odometryHeading;
+	monteCarlo(currentSensorReading);
 }
