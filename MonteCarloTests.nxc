@@ -1,0 +1,88 @@
+#include "AgentController.nxc"
+#include "vectors.nxc"
+sensorReading makeFirstSensorReading();
+sensorReading makeSecondSensorReading();
+
+task main(){
+	/*while(true){
+	ClearScreen();
+	Wait(1000);
+	
+	float test = Random(99);
+	NumOut(0,LCD_LINE1, Random(3)-1+test/100.00 );
+	Wait(1000);
+	}*/
+	int arraySize = 10;
+	vec2 inputArray[10];
+	initQueue(inputArray,10);
+	initiateTimeStep();
+	int i;
+	int g =0;
+	NumOut(0,LCD_LINE1,g++);
+	Wait(2000);
+	firstMove(25,20,inputArray, arraySize);
+	
+	
+	ClearScreen();
+	NumOut(0,LCD_LINE1,g++);
+	Wait(2000);
+	nextMove(makeFirstSensorReading(),inputArray,arraySize);
+	ClearScreen();
+	NumOut(0,LCD_LINE1,g++);
+	Wait(2000);
+	nextMove(makeSecondSensorReading(),inputArray,arraySize);
+}
+
+sensorReading makeFirstSensorReading(){
+	sensorReading sensorTest;
+	ArrayInit(sensorTest.ultraSonic,0,6);
+	ArrayInit(sensorTest.ultraSonicHeading,0,6);
+
+	
+	sensorTest.ultraSonic[0] = 255;
+	sensorTest.ultraSonic[1] = 10;
+	sensorTest.ultraSonic[2] = 100;
+	sensorTest.ultraSonic[3] = 255;
+	sensorTest.ultraSonic[4] = 13;
+	sensorTest.ultraSonic[5] = 12;
+	
+	sensorTest.ultraSonicHeading[0] = 0;
+	sensorTest.ultraSonicHeading[1] = 90;
+	sensorTest.ultraSonicHeading[2] = 180;
+	sensorTest.ultraSonicHeading[3] = 270;
+	sensorTest.ultraSonicHeading[4] = 70;
+	sensorTest.ultraSonicHeading[5] = 110;
+	sensorTest.heading = 90;
+	return sensorTest;
+}
+
+sensorReading makeSecondSensorReading(){
+	sensorReading sensorTest;
+	ArrayInit(sensorTest.ultraSonic,0,6);
+	ArrayInit(sensorTest.ultraSonicHeading,0,6);
+	
+	sensorTest.ultraSonic[0] = 80;
+	sensorTest.ultraSonic[1] = 30;
+	sensorTest.ultraSonic[2] = 255;
+	sensorTest.ultraSonic[3] = 255;
+	sensorTest.ultraSonic[4] = 35;
+	sensorTest.ultraSonic[5] = 34;
+	
+	sensorTest.ultraSonicHeading[0] = 0;
+	sensorTest.ultraSonicHeading[1] = 90;
+	sensorTest.ultraSonicHeading[2] = 180;
+	sensorTest.ultraSonicHeading[3] = 270;
+	sensorTest.ultraSonicHeading[4] = 70;
+	sensorTest.ultraSonicHeading[5] = 110;
+    sensorTest.heading = 90;
+	
+	return sensorTest;
+}
+/*
+2,2
+0, 3
+0, 3 
+0, 3 = 2,11
+
+, -13
+*/

@@ -1,14 +1,15 @@
 #include "quickMaffs.nxc"
 #include "vectors.nxc"
-#include "vectorQueue.nxc"
-#define SAMPLE_SIZE  1000 
+#include "map.nxc"
+#define SAMPLE_SIZE  100 
 #define SENSOR_HEADING 0
 #define SENSOR_X 0
 #define SENSOR_Y  0
+#define ULTAR_SONIC_MAX 155
 #define NOISE_REDUCTION_1 1
-#define NOISE_REDUCTION_2 1
+#define NOISE_REDUCTION_2 0
 #define NOISE_REDUCTION_3 1
-#define NOISE_REDUCTION_4 1
+#define NOISE_REDUCTION_4 0
 #define ZHIT 0.82588
 //#define ZSHORT 0.00036693 not used
 #define ZMAX 0.17325
@@ -16,7 +17,8 @@
 #define OHIT 8.4662
 //#define LAMBDA_SHORT 0.0183 not used
 #define DRAW_PROB 1000
-int drawCount;
+
+
 struct sensorReading{
  vec2 vector;
  byte ultraSonic[];
@@ -34,108 +36,203 @@ struct state{
 };
 
 struct timeStep{
- state states[SAMPLE_SIZE ];
- state probStates[SAMPLE_SIZE ];
- float weigths[SAMPLE_SIZE ];
+ state states[SAMPLE_SIZE];
+ state probStates[SAMPLE_SIZE];
  sensorReading sensor;
+ float maxProbability;
 };
 
-timeStep monteCarlo(sensorReading sensor,timeStep previousTimeStep);
+timeStep timeStep0;
+timeStep timeStep1;
+
+
+void monteCarlo(sensorReading sensor);
 state sampleMotionModel(sensorReading sensor, state previousState, sensorReading previousSensorReading);
 state sensorMotionModel(sensorReading sensor,state previousState, sensorReading previousSensorReading);
 float sample(float b);
 float probabilityTriangular(float a, float b);
 float likelihoodFinderModel(sensorReading sensor, state newState);
 float distanceNearestObject(int x, int y);
+float calculateMaxProb(sensorReading sensor);
 
-
-timeStep monteCarlo(sensorReading sensor,timeStep previousTimeStep)
+void monteCarlo(sensorReading sensor)
 {
-  timeStep currentTimeStep;
-  currentTimeStep.sensor = sensor;
+  timeStep1.sensor = sensor;
   int i;
   for( i=0;i<SAMPLE_SIZE ;i++){
-        currentTimeStep.probStates[i]= sampleMotionModel(sensor,previousTimeStep.probStates[i],previousTimeStep.sensor);
+        timeStep1.probStates[i]= sampleMotionModel(sensor,timeStep0.probStates[i],timeStep0.sensor);
 
   }
-  drawCount=0;
+  int tempDrawCount=0;
+  timeStep1.maxProbability = calculateMaxProb(sensor);
+  while(tempDrawCount < SAMPLE_SIZE){
   for(i=0;i<SAMPLE_SIZE ;i++){
-		
-	 if(currentTimeStep.probStates[i].probability*DRAW_PROB>=(Random(DRAW_PROB-1)+1)){
-	    currentTimeStep.states[drawCount]=currentTimeStep.probStates[i];
-		drawCount++;
+	 if(timeStep1.probStates[i].probability*DRAW_PROB>=(Random(timeStep1.maxProbability*DRAW_PROB))){
+	    timeStep1.states[tempDrawCount]=timeStep1.probStates[i];
+		tempDrawCount++;
 	 }
   }
- return currentTimeStep;
+  }
 }
 
 state sampleMotionModel(sensorReading sensor, state previousState, sensorReading previousSensorReading){
-      float probability;
+ 
       state newState;
 	  newState = sensorMotionModel(sensor, previousState, previousSensorReading);
       newState.probability = likelihoodFinderModel(sensor,newState);
       return newState;
 }
+float calculateMaxProb(sensorReading sensor){
+	float maxProbability = 100000000.0;
+	int i;
+	int arrayLength = ArrayLen(sensor.ultraSonic);
+	for (i=0; i<arrayLength;i++){
+		if(sensor.ultraSonic[i]<ULTAR_SONIC_MAX){
+			maxProbability = maxProbability*(ZHIT*probabilityTriangular(0,pow(OHIT,2))+ZRAND/ZMAX);
+		}
 
-state sensorMotion+Model(sensorReading sensor, state previousState, sensorReading previousSensorReading){
-      float rotation1 = atan2(sensor.vector.y-previousSensorReading.vector.y,sensor.vector.x-previousSensorReading.vector.x)-previousSensorReading.odometryHeading;
+	
+	}
+	return maxProbability;
+}
+
+state sensorMotionModel(sensorReading sensor, state previousState, sensorReading previousSensorReading){
+	  float previousOdometryHeading = (previousSensorReading.odometryHeading * 2 * PI)/360;
+	  float currentOdomentryHeading = (sensor.odometryHeading *2 * PI)/360;
+	  
+      float rotation1 = atan2(sensor.vector.y-previousSensorReading.vector.y,sensor.vector.x-previousSensorReading.vector.x)-previousOdometryHeading;
       float trans = sqrt(pow(previousSensorReading.vector.x-sensor.vector.x,2)+pow(previousSensorReading.vector.y-sensor.vector.y,2));
-      float rotation2 = sensor.odometryHeading-previousSensorReading.odometryHeading-rotation1;
-
-      
+      float rotation2 = currentOdomentryHeading-previousOdometryHeading-rotation1;
+	  state newState;
+	  bool done = false ;
+      while(!done){
       float rotation1Updated = rotation1 - sample(NOISE_REDUCTION_1*rotation1+NOISE_REDUCTION_2*trans);
       float transUpdated = trans-sample(NOISE_REDUCTION_3*trans+NOISE_REDUCTION_4*(rotation1+rotation2));
       float rotation2Updated = rotation2 - sample(NOISE_REDUCTION_1*rotation2+NOISE_REDUCTION_2*trans);
       
-      state newState;
-      newState.x = trunc(previousState.x+transUpdated*cos(previousState.heading+rotation1Updated)+0.5);
-      newState.y = trunc(previousState.y+transUpdated*sin(previousState.heading+rotation1Updated)+0.5);
-      newState.heading = previousState.heading + rotation1Updated + rotation2Updated;
-      
+     
+      newState.x = trunc(previousState.x+transUpdated*cos(previousOdometryHeading+rotation1Updated)+0.5);
+      newState.y = trunc(previousState.y+transUpdated*sin(previousOdometryHeading+rotation1Updated)+0.5);
+      newState.heading = ((previousOdometryHeading + rotation1Updated + rotation2Updated)/ (2 * PI))  *360;
+	  unsigned short index = coordToLstIndex(newState.x,newState.y);
+	  if(index != -1  && isValid(index)){
+		done = true ;
+	  }
+	 }
       return newState;
 }
 
-float sample(float b){
-     return sqrt(6)/2*(Random(b*2)-b)*(Random(b*2)-b);
+/*float sample(float b){
+     return b*(Random(2)-1)*(Random(2)-1);
 
-}
+}*/
+float sample(float b){
+	float temp = Random(99);
+	float temp2 = Random(99);
+     return b*((Random(2)-temp/100.00)*(Random(2)-temp2/100.00));
+
+}/*
+float sample(float b){
+	float sum =0;
+	int i;
+	for(i=0;i<12;i++){
+		sum = sum + Random(2)-1;
+	}
+	
+     return b/6*sum;
+
+}*/
 
 
 
 float probabilityTriangular(float a, float b){
       if(a>sqrt(6*b)){
         return 0;
-      }else return (sqrt(6*b)-a)/6*b;
+      }else return (sqrt(6*b)-a)/(6*b);
 }
 
 
 float likelihoodFinderModel(sensorReading sensor, state newState){
-      float probability =1;
-	  int i;
+      float probability =100000000.0;
+	  int i=0;
 	  int arrayLength = ArrayLen(sensor.ultraSonic);
+	  /*ClearScreen();
+			Wait(2000);
+			NumOut(0,LCD_LINE1,i);
+			NumOut(0,LCD_LINE2,newState.x);
+			NumOut(0,LCD_LINE3,newState.y);
+			Wait(10000);*/
 	  for (i=0; i<arrayLength;i++){
-		    int sensorXt = trunc(newState.x+ SENSOR_X * cos(sensor.heading)-SENSOR_Y*sin(sensor.heading)+sensor.ultraSonic[i]*cos(sensor.heading+sensor.ultraSonicHeading[i])+0.5);
-			int sensorYt = trunc(newState.y+ SENSOR_Y * cos(sensor.heading)+SENSOR_X*sin(sensor.heading)+sensor.ultraSonic[i]*sin(sensor.heading+sensor.ultraSonicHeading[i])+0.5);
-			float dist2 = 2;
-			//findDistToObject(sensorXt,sensorYt);
-			probability=probability*(ZHIT*probabilityTriangular(dist2,pow(OHIT,2))+ZRAND/ZMAX);
-		 
+			if(sensor.ultraSonic[i]<ULTAR_SONIC_MAX){
+			float robotHeading = (sensor.heading * 2 * PI)/360;
+			float sonicHeading = (+sensor.ultraSonicHeading[i] *2 * PI)/360;
+			float sonicReading = sensor.ultraSonic[i]/GRID_FIELD_WIDTH+1;
+			
+			int sensorXt = trunc((newState.x+ SENSOR_X * cos(robotHeading)-SENSOR_Y*sin(robotHeading)+sonicReading*cos(robotHeading+sonicHeading))+0.5);
+			int sensorYt = trunc((newState.y+ SENSOR_Y * cos(robotHeading)+SENSOR_X*sin(robotHeading)+sonicReading*sin(robotHeading+sonicHeading))+0.5);
+			vec2 vec;
+			vec.x = sensorXt;
+			vec.y = sensorYt;
+			float dist2 = findDistToObject(vec);
+			probability=probability*(ZHIT*probabilityTriangular(pow(dist2,2),pow(OHIT,2))+ZRAND/ZMAX);
+			/*ClearScreen();
+			Wait(2000);
+			NumOut(0,LCD_LINE1,i);
+			NumOut(0,LCD_LINE2,sensorXt);
+			NumOut(0,LCD_LINE3,sensorYt);
+			NumOut(0,LCD_LINE4,dist2);
+			NumOut(0,LCD_LINE5,probability);
+			Wait(10000);*/
+		 }
 	  }
 	  return probability;
 
 }
+/*
+x =2
+y =10
+h =90
+0 =
+1 =1 x=1 y=10
+2 =0  x=2 y=0
+3 =
+4 =1  x=1 y=10
+5 =1  x=1  y=10
+p =9951
 
+*/
+
+
+/*
 state findBestState(timeStep currentTimeStep){
 	state bestState;
-	if(drawCount != 0){
-		state bestState = currentTimeStep.states[0];
-	}else{
-		//Make a exception
-	}
+	bestState.x = 0;
+	bestState.y = 0;
+	bestState.heading = 0;
 	int i;
-	for(i=1;i<drawCount;i++){
-		if(currentTimeStep.states[i].probability > bestState.probability){
-			bestState = currentTimeStep.states[i];
+	int arrayLength = currentTimeStep.drawCount;
+	for(i=0;i<arrayLength;i++){
+		
+		bestState.x = bestState.x + currentTimeStep.states[i].x;
+		bestState.y = bestState.y + currentTimeStep.states[i].y;
+		bestState.heading = bestState.heading + currentTimeStep.states[i].heading;
+		
+	}
+	bestState.x = bestState.x/i;
+	bestState.y = bestState.y/i;
+	bestState.heading = bestState.heading/i;
+	
+	return bestState;
+}*/
+
+state findBestState(){
+	state bestState;
+	bestState.probability = 0;
+	int i;
+	int arrayLength = ArrayLen(timeStep1.states);
+	for(i=0;i<arrayLength;i++){
+		if(timeStep1.states[i].probability > bestState.probability){
+			bestState = timeStep1.states[i];
 		}
 		
 	}
