@@ -120,28 +120,12 @@ state sensorMotionModel(sensorReading sensor, state previousState, sensorReading
       return newState;
 }
 
-/*float sample(float b){
-     return b*(Random(2)-1)*(Random(2)-1);
-
-}*/
 float sample(float b){
 	float temp = Random(99);
 	float temp2 = Random(99);
      return b*((Random(2)-temp/100.00)*(Random(2)-temp2/100.00));
 
-}/*
-float sample(float b){
-	float sum =0;
-	int i;
-	for(i=0;i<12;i++){
-		sum = sum + Random(2)-1;
-	}
-	
-     return b/6*sum;
-
-}*/
-
-
+}
 
 float probabilityTriangular(float a, float b){
       if(a>sqrt(6*b)){
@@ -154,12 +138,6 @@ float likelihoodFinderModel(sensorReading sensor, state newState){
       float probability =100000000.0;
 	  int i=0;
 	  int arrayLength = ArrayLen(sensor.ultraSonic);
-	  /*ClearScreen();
-			Wait(2000);
-			NumOut(0,LCD_LINE1,i);
-			NumOut(0,LCD_LINE2,newState.x);
-			NumOut(0,LCD_LINE3,newState.y);
-			Wait(10000);*/
 	  for (i=0; i<arrayLength;i++){
 			if(sensor.ultraSonic[i]<ULTAR_SONIC_MAX){
 			float robotHeading = (sensor.heading * 2 * PI)/360;
@@ -173,55 +151,11 @@ float likelihoodFinderModel(sensorReading sensor, state newState){
 			vec.y = sensorYt;
 			float dist2 = findDistToObject(vec);
 			probability=probability*(ZHIT*probabilityTriangular(pow(dist2,2),pow(OHIT,2))+ZRAND/ZMAX);
-			/*ClearScreen();
-			Wait(2000);
-			NumOut(0,LCD_LINE1,i);
-			NumOut(0,LCD_LINE2,sensorXt);
-			NumOut(0,LCD_LINE3,sensorYt);
-			NumOut(0,LCD_LINE4,dist2);
-			NumOut(0,LCD_LINE5,probability);
-			Wait(10000);*/
 		 }
 	  }
 	  return probability;
 
 }
-/*
-x =2
-y =10
-h =90
-0 =
-1 =1 x=1 y=10
-2 =0  x=2 y=0
-3 =
-4 =1  x=1 y=10
-5 =1  x=1  y=10
-p =9951
-
-*/
-
-
-/*
-state findBestState(timeStep currentTimeStep){
-	state bestState;
-	bestState.x = 0;
-	bestState.y = 0;
-	bestState.heading = 0;
-	int i;
-	int arrayLength = currentTimeStep.drawCount;
-	for(i=0;i<arrayLength;i++){
-		
-		bestState.x = bestState.x + currentTimeStep.states[i].x;
-		bestState.y = bestState.y + currentTimeStep.states[i].y;
-		bestState.heading = bestState.heading + currentTimeStep.states[i].heading;
-		
-	}
-	bestState.x = bestState.x/i;
-	bestState.y = bestState.y/i;
-	bestState.heading = bestState.heading/i;
-	
-	return bestState;
-}*/
 
 state findBestState(){
 	state bestState;
@@ -236,86 +170,3 @@ state findBestState(){
 	}
 	return bestState;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-float motionModelProbability(sensorReading sensor,state newState, state previousState, sensorReading previousSensorReading){
-      float rotation1 = atan2(sensor.vector.y-previousSensorReading.vector.y,sensor.vector.x-previousSensorReading.vector.x)-previousSensorReading.heading;
-      float trans = sqrt(pow(previousSensorReading.vector.x-sensor.vector.x,2)+pow(previousSensorReading.vector.y-sensor.vector.y,2));
-      float rotation2 = sensor.heading-previousSensorReading.heading-rotation1;
-
-
-      float rotation1Odometry = atan2(newState.y-previousState.y, newState.x-previousState.x)-previousState.heading;
-      float transOdometry = sqrt(pow(previousState.x-newState.x,2)+pow(previousState.y-newState.y,2));
-      float rotation2Odometry = newState.heading-previousState.heading-rotation1;
-      
-      float prob1 = probabilityTriangular(rotation1-rotation1Odometry,NOISE_REDUCTION_1*rotation1Odometry+NOISE_REDUCTION_2*transOdometry);
-      float prob2 = probabilityTriangular(trans-transOdometry,NOISE_REDUCTION_3*transOdometry+NOISE_REDUCTION_4*(rotation1Odometry+rotation2Odometry));
-      float prob3 = probabilityTriangular(rotation2-rotation2Odometry,NOISE_REDUCTION_1*rotation2Odometry+NOISE_REDUCTION_2*transOdometry);
-
-      return prob1*prob2*prob3;
-}
-
-/*
-void learnParameters(float &Parameters[],byte &SensorReadings[],int SensorReadingsLength,byte &realReadings[]){
-     int i;
-	 float n,OHIT;
-	 OHIT = calculateOHIT(SensorReadings,SensorReadingsLength,realReadings);
-	 for(i=0;i<SensorReadingsLength;i++){
-	    n = pow(phit()+Pshort+Pmax+Prand,-1)
-	 }
-	 
-     
-
-}
-
-float phit(byte sensorReading, byte realReading, float OHIT){
-     if(0=<sensorReading<= SENSOR_MAX){
-	    int i;
-		float n=0;
-		
-		 pow(EULER,-1/4*(pow(realReading,3)/3-4*pow(realReading,2)+4*realReading))/(sqrt(2*PI*pow(OHIT,2)));  
-		
-		
-		
-		return 
-	 }
-	 return 0;
-}
-
-float calculateBigN(byte sensorReading, byte realReading, float OHIT){
-     float bigDiversion = -0.5*pow(sensorReading-realReading,2)/pow(OHIT,2);
-     return 1/sqrt(2*PI*pow(OHIT,2))*pow(EULER,bigDiversion);
-}
-
-float calculateOHIT(byte &SensorReadings[],int SensorReadingsLength,byte &realReadings[]){
-     int i, hitReadings =0;
-	 float sum =0;
-	 for(i=0;i<SensorReadingsLength;i++){
-	    if(0=<sensorReadings[i]<= SENSOR_MAX){
-		  sum +=pow(sensorReadings[i]-realReadings[i],2);
-		  hitReadings++;
-		}
-		return sqrt(1/hitReadings*sum);
-	 }
-}
-*/
-
-

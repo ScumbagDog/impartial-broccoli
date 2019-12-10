@@ -320,10 +320,6 @@ bool outOfBounds(int index, bool isX) {
   }
 }
 
-/*float calcEuclideanDist(float xFrom, float yFrom, float xTo, float yTo) {
-  return sqrt(pow(abs(xFrom - xTo), 2) + pow(abs(yFrom - yTo), 2));
-}*/
-
 float calcEuclideanDist(float xFrom, float yFrom, float xTo, float yTo) {
   return sqrt(pow(xFrom - xTo, 2) + pow(yFrom - yTo, 2));
 }
