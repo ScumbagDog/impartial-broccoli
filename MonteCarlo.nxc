@@ -11,11 +11,9 @@
 #define NOISE_REDUCTION_3 1
 #define NOISE_REDUCTION_4 0
 #define ZHIT 0.82588
-//#define ZSHORT 0.00036693 not used
 #define ZMAX 0.17325
 #define ZRAND 0.00050299
 #define OHIT 8.4662
-//#define LAMBDA_SHORT 0.0183 not used
 #define DRAW_PROB 1000
 
 
