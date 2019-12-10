@@ -5,57 +5,68 @@
 #define ROBOT_WIDTH 11.27
 #define CM_TO_VECTORUNIT 100
 #define MAX_MOTORPOWER 70
+#define MAX_WAIT_TIME 1000
+#define OBSTACLE_MIN_RANGE 30
 #include "vectors.nxc"
 #include "quickMaffs.nxc"
 
-void move(vec2 moveVector);
 void rotate(vec2 moveVector);
-void driveStraight(float vectorUnitsToDrive);
 float getRadiansToTurn(vec2 moveVector);
-void initiateMovement(vec2 moveVector);
-task turnWithMotorA();
-task turnWithMotorB();
-task releaseMotors();
+void emergencyBrake();
+void waitState(bool &hasObstacle);
 
-vec2 currentMovementVector;
 int sharedDegreesToTurn;
 int releaseMotorCallCount;
+bool emergencyBrakePanic;
 
-mutex moveVectorMutex;
-mutex sharedDegreeMutex;
-mutex rotationMutex;
-mutex countMutex;
-
-void moveAhead(float vectorUnitsToDrive){
-  float fullRotationsToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / WHEEL_CIRCUMFERENCE) / 10; //don't remove 10. for some reason it adds a factor 10 too much
+void moveAhead(float vectorUnitsToDrive, float &vectorUnitsDriven){
+  float fullRotationsToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / (WHEEL_CIRCUMFERENCE));
   long degreesToDrive = round(DEGREES_PER_CIRCLE * fullRotationsToDrive);
   long tachoDegreesDriven = 0;
+  SetSensorUltrasonic(IN_4);
+  emergencyBrakePanic = false;
   
   OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, 0, RESET_ALL); //*burde* virke med OUT_AB, men hvis ikke, så gør det i hvert sit kald
   while(tachoDegreesDriven < degreesToDrive){
     tachoDegreesDriven = MotorTachoCount(OUT_A);
+    byte sensorReading = SensorUS(IN_4);
+    if(sensorReading <= OBSTACLE_MIN_RANGE){
+      emergencyBrake();
+      if(emergencyBrakePanic){
+        break;
+      }
+    }
   }
   Off(OUT_AB);
+  float tacofloat = tachoDegreesDriven;
+  vectorUnitsDriven = (tacofloat / DEGREES_PER_CIRCLE * (WHEEL_CIRCUMFERENCE) /CM_TO_VECTORUNIT);
 }
 
-void movement(){
-  Acquire(moveVectorMutex);
-  if(!floatEquals(vectorMag(currentMovementVector), 0)){
-    //If current vector isn't a nul-vektor
-    vec2 moveVectorSnapshot = currentMovementVector;
-    Release(moveVectorMutex);
-    initiateMovement(moveVectorSnapshot);
+void emergencyBrake(){
+  OffEx(OUT_AB, RESET_NONE);
+  short cycleCount = 0;
+  byte hasObstacle = true;
+  while(hasObstacle && cycleCount < 4){
+    waitState(hasObstacle);
+    cycleCount++;
+  }
+  if(cycleCount >= 4){
+    emergencyBrakePanic = true;
   }
   else{
-    Release(moveVectorMutex);
+    OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, 0, RESET_NONE);
   }
 }
 
-void initiateMovement(vec2 moveVector){
-  if(!floatEquals(moveVector.x, 0) || sign(moveVector.y) < 0){
-    rotate(moveVector);
-    moveVector.y = vectorMag(moveVector);
-    moveVector.x = 0;
+void waitState(bool &hasObstacle){
+  long entryTick = CurrentTick();
+  long currentTick = entryTick;
+  while(currentTick - entryTick < MAX_WAIT_TIME){
+    currentTick = CurrentTick();
+    byte sensorReading = SensorUS(IN_4);
+    if(sensorReading > OBSTACLE_MIN_RANGE){
+      hasObstacle = false;
+    }
   }
 }
 
@@ -65,10 +76,6 @@ void rotate(vec2 moveVector){
   float distanceToTurnWheels = radiansToTurnRobot * (ROBOT_WIDTH / 2); //Robot width is the length of its radius, which is the length of one radian.
   float radiansToTurnWheels = distanceToTurnWheels / (WHEEL_DIAMETER / 2);
   int degreesToTurnWheels = round(radToDeg(radiansToTurnWheels)); //if the robot doesn't turn properly, change this line
-
-  Acquire(sharedDegreeMutex);
-  sharedDegreesToTurn = degreesToTurnWheels;
-  Release(sharedDegreeMutex);
 
   long tachoDegreesDriven = 0;
   
