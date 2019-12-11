@@ -18,13 +18,15 @@ mutex moveVectorMutex;
 task main() {
   SetSensorLowspeed(IN_1);
   SetSensorTouch(IN_2);
+  SetSensorLowspeed(IN_4);
   initQueue(moveVectorQueue, VECTOR_QUEUE_SIZE);
   vec2 test;
   test.x = 0;
-  test.y = 1;
+  test.y = -1;
+  rotate(test);
   enqueueVector(test, moveVectorQueue, VECTOR_QUEUE_SIZE);
   float actualDistanceDriven;
-  moveAhead(test.y, actualDistanceDriven);
+  //moveAhead(test.y, actualDistanceDriven);
   //Precedes(schedule);
 }
 

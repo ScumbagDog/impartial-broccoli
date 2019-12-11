@@ -1,0 +1,131 @@
+//=====================================================================
+// Calibrate compass
+//
+// Compass on S4.
+//
+// Assume that one drive motor is on OUT_B, Will power this one motor
+// to spin robot in a circle while calibrating.
+
+#define DRIVE_MOTOR  OUT_B
+#define COMPASS      S1
+
+
+//=====================================================================
+// bool HTCompassCalibrateStart(const byte & port)
+//
+// Set HiTechnic Compass to Calibrate mode.  While in Calibrate mode,
+// robot should slowly turn more than 360 degrees for duration of about
+// 20 seconds.  Call HTCompassCalibrateStop to stop calibrationb mode.
+//
+bool HTCompassCalibrateStart(const byte & port)
+{
+  int count;
+  byte inI2Ccmd[];
+  char outbuf[];
+
+  ArrayInit(inI2Ccmd, 0, 3);
+  inI2Ccmd[0] = 0x02;
+  inI2Ccmd[1] = 0x41;     // Mode:
+  inI2Ccmd[2] = 0x43;     // Calibrate
+
+  count=0;
+  return I2CBytes(port, inI2Ccmd, count, outbuf);
+}
+
+//---------------------------------------------------------------------
+// bool HTCompassCalibrateStop(const byte & port)
+//
+// Stop the Calibration mode that was started by
+// HTCompassCalibrateStart.  Returns true if the calibration was
+// successful.
+bool HTCompassCalibrateStop(const byte & port)
+{
+  int count;
+  byte inI2Ccmd[];
+  char outbuf[];
+  bool bSuccess;
+
+  if (port > IN_4)
+    return false;
+
+  ArrayInit(inI2Ccmd, 0, 3);
+  inI2Ccmd[0] = 0x02;
+  inI2Ccmd[1] = 0x41; // Mode
+  inI2Ccmd[2] = 0x00; // Normal Read
+
+  count=0;
+  bSuccess = I2CBytes(port, inI2Ccmd, count, outbuf);
+
+  if (bSuccess) {
+    Wait(100);
+
+    // Read back location 0x41 to see if successful
+    ArrayInit(inI2Ccmd, 0, 2);
+    inI2Ccmd[0] = 0x02;
+    inI2Ccmd[1] = 0x41;    // Mode
+
+    count=1;
+    bSuccess = I2CBytes(port, inI2Ccmd, count, outbuf);
+
+    if (bSuccess) {
+      bSuccess = (outbuf[0] == 0);
+    }
+  }
+  return (bSuccess);
+}
+
+
+//=====================================================================
+// Sample program to recalibrate the compass sensor.  Shows current
+// compass value on screen.  If user presses the Enter button then
+// robot activates one drive motor (OUT_B), to spin robot while in
+// compass calibration mode.  Result of calibration, success of fail,
+// are displayed on the screen after the calibration.
+//
+task main()
+{
+  int heading;
+  bool bSuccess;
+  SetSensorLowspeed(COMPASS);
+  Wait(100);
+
+  TextOut(0, LCD_LINE1, "HiTechnic");
+  TextOut(0, LCD_LINE2, "  Compass Sensor");
+  TextOut(15, LCD_LINE8, "[Calibrate]");
+
+  while(true) {
+    heading = SensorHTCompass(COMPASS);
+    TextOut(0, LCD_LINE4, "Heading:      ");
+    NumOut(8*6, LCD_LINE4, heading);
+
+    // Check for Enter button
+    if (ButtonPressed(BTNCENTER, false)) {
+      // Wait for release
+      while(ButtonPressed(BTNCENTER, false));
+
+      TextOut(0, LCD_LINE4, "Calibrating...");
+
+      // Start turning robot
+      OnFwd(DRIVE_MOTOR, 30);
+      HTCompassCalibrateStart(COMPASS);
+
+      // Calibrating while robot is turning
+      Wait(20000);
+
+      // Stop Calibration
+      bSuccess = HTCompassCalibrateStop(COMPASS);
+      Off(OUT_B);
+
+      if (bSuccess) {
+        PlaySound(SOUND_UP);
+        TextOut(0, LCD_LINE4, "Cal. success!");
+      } else {
+        PlaySound(SOUND_LOW_BEEP);
+        TextOut(0, LCD_LINE4, "Cal. failed.");
+      }
+      Wait(5000);
+
+    }
+    Wait(100);
+  }
+}
