@@ -32,7 +32,7 @@ unsigned short calcManhattanDist(unsigned short index1, unsigned short index2);
 vec2 makeVec(unsigned short index);
 bool movingInStraightLine(unsigned short currInd, unsigned short tempInd);
 float findDistToObject(vec2 vec);
-bool outOfBounds(int index, bool isX);
+bool outOfBounds(int x, int y);
 float calcEuclideanDist(float xFrom, float yFrom, float xTo, float yTo);
 float min(float val1, float val2);
 
@@ -253,71 +253,29 @@ float findDistToObject(vec2 vec) {
     yInit = vec.y - layer;
     yLimit = vec.y + layer;
 
-	for(int i = xInit; i <= xLimit; i++){
-		if(!outOfBounds(i, true)){
-			if ( !outOfBounds(yLimit, false)) {
-				if (map[i][yLimit] == table || map[i][yLimit] == wall) {
-					tempDist = calcEuclideanDist(vec.x, vec.y, i, yLimit);
-					shortestDist = min(tempDist, shortestDist);
-					objectFound = true;
-				}
-			}
-		    if(!outOfBounds(yInit,false)){
-				if (map[i][yInit] == table || map[i][yInit] == wall) {
-					tempDist = calcEuclideanDist(vec.x, vec.y, i, yInit);
-					shortestDist = min(tempDist, shortestDist);
-					objectFound = true;
-				}
-			} 
-		}
-	}
-	for(int i = yInit+1; i <= yLimit-1; i++){
-		if(!outOfBounds(i, false)){
-			if (!outOfBounds(xInit, true)) {
-				if (map[xInit][i] == table || map[xInit][i] == wall) {
-					tempDist = calcEuclideanDist(vec.x, vec.y, xInit, i);
-					shortestDist = min(tempDist, shortestDist);
-					objectFound = true;
-				}
-			} 
-			if(!outOfBounds(xLimit,true)){
-				if (map[xLimit][i] == table || map[xLimit][i] == wall) {
-					tempDist = calcEuclideanDist(vec.x, vec.y, xInit, i);
-					shortestDist = min(tempDist, shortestDist);
-					objectFound = true;
-				}
-			}
-		}
-	}
-    /*for(int x = xInit; x <= xLimit; x++) {
+    for(int x = xInit; x <= xLimit; x++) {
       for(int y = yInit; y <= yLimit; ) {
-        if (!outOfBounds(x, true) && !outOfBounds(y, false)) {
-          if (map[x][y] == table || map[x][y] == wall) {
-            tempDist = calcEuclideanDist(vec.x, vec.y, x, y);
-            shortestDist = min(tempDist, shortestDist);
-            objectFound = true;
-          }
+        if (!outOfBounds(x, y) && (map[x][y] == table || map[x][y] == wall)) {
+          tempDist = calcEuclideanDist(vec.x, vec.y, x, y);
+          shortestDist = min(tempDist, shortestDist);
+          objectFound = true;
+        }
 
-          if(x == xInit || x == xLimit) {
-            y++;
-          } else {
-            y += 2 * layer;
-          }
+        if(x == xInit || x == xLimit) {
+          y++;
+        } else {
+          y += 2 * layer;
         } 
       }
-    }*/
+    }
 
     layer++;
-	}
+  }
   return shortestDist;
 }
 
-bool outOfBounds(int index, bool isX) {
-  if (isX) {
-    return index < 0 || index >= MAP_LENGTH;
-  } else {
-    return index < 0 || index >= MAP_WIDTH;
-  }
+bool outOfBounds(int x, int y) {
+  return (x < 0 || x >= MAP_LENGTH) || (y < 0 || y >= MAP_WIDTH);
 }
 
 float calcEuclideanDist(float xFrom, float yFrom, float xTo, float yTo) {
