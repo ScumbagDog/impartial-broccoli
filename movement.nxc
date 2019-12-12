@@ -24,8 +24,8 @@ int releaseMotorCallCount;
 bool emergencyBrakePanic;
 
 void moveAhead(float vectorUnitsToDrive, float &vectorUnitsDriven){
-  float fullRotationsToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / (WHEEL_CIRCUMFERENCE));
-  long degreesToDrive = round(DEGREES_PER_CIRCLE * fullRotationsToDrive);
+  float radiansToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / (WHEEL_DIAMETER / 2));
+  long degreesToDrive = round(radToDeg(radiansToDrive));
   long tachoDegreesDriven = 0;
   SetSensorUltrasonic(IN_4);
   emergencyBrakePanic = false;
