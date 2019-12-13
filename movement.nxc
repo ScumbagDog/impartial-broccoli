@@ -9,6 +9,8 @@
 #define OBSTACLE_MIN_RANGE 30
 #define COMPASS_ALLOWED_UNCERTAINTY 5
 #define COMPASS_PORT IN_1
+#define VECTOR_MIN_BEFORE_CLEAR 0.005
+#define US_DEGREE_LIMIT 15
 #include "vectors.nxc"
 #include "quickMaffs.nxc"
 
@@ -23,12 +25,15 @@ int sharedDegreesToTurn;
 int releaseMotorCallCount;
 bool emergencyBrakePanic;
 
-void moveAhead(float vectorUnitsToDrive, float &vectorUnitsDriven){
+void moveAhead(vec2 &moveVector){
+	float vectorUnitsToDrive = vectorMag(moveVector);
   float radiansToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / (WHEEL_DIAMETER / 2));
   long degreesToDrive = round(radToDeg(radiansToDrive));
   long tachoDegreesDriven = 0;
   SetSensorUltrasonic(IN_4);
   emergencyBrakePanic = false;
+  float vectorUnitsDriven;
+  int tachoLimitToStopUS = degreesToDrive - US_DEGREE_LIMIT;
 
   OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, 0, RESET_ALL); //*burde* virke med OUT_AB, men hvis ikke, så gør det i hvert sit kald
 
@@ -45,6 +50,12 @@ void moveAhead(float vectorUnitsToDrive, float &vectorUnitsDriven){
   Off(OUT_AB);
   float tachofloat = tachoDegreesDriven;
   vectorUnitsDriven = (tachofloat / DEGREES_PER_CIRCLE * (WHEEL_CIRCUMFERENCE) /CM_TO_VECTORUNIT);
+  float remainingVectorUnits = vectorMag(moveVector) - vectorUnitsDriven;
+  if(abs(remainingVectorUnits) < VECTOR_MIN_BEFORE_CLEAR){
+    remainingVectorUnits = 0;
+  }
+  float percentileVectorLeft = remainingVectorUnits / vectorMag(moveVector);
+  moveVector = vectorScalarMult(moveVector, percentileVectorLeft);
 }
 
 void emergencyBrake(){
@@ -93,12 +104,9 @@ void rotate(vec2 moveVector){
   Off(OUT_AB);
 
   int headingAfterRotation = SensorHTCompass(COMPASS_PORT);
-
-  while(!ButtonPressed(BTNCENTER, false));
   int degreesToTurnRobot = radToDeg(radiansToTurnRobot);
   degreesToTurnRobot = sign(moveVector.x) == -1 ? -degreesToTurnRobot : degreesToTurnRobot;
   compassCorrection(headingBeforeRotation, headingAfterRotation, degreesToTurnRobot);
-  while(!ButtonPressed(BTNCENTER, false));
 }
 
 void compassCorrection(int headingBeforeRotation, int headingAfterRotation, int degreesToTurnRobot){
@@ -135,11 +143,6 @@ void compassCorrection(int headingBeforeRotation, int headingAfterRotation, int 
       }
     Off(OUT_AB);
   }
-  TextOut(0,LCD_LINE6,"exp: " + NumToStr(degreesToTurnRobot));
-  TextOut(0,LCD_LINE7,"act: " + NumToStr(differenceBetweenHeading));
-  TextOut(0,LCD_LINE8, "cor:" + NumToStr(correctedDegree));
-  Wait(3000);
-
 }
 
 int getWheelDegreesFromRobotRotation(float radiansToTurnRobot) {
