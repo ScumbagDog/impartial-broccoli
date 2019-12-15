@@ -53,12 +53,24 @@ void fillMap(){
   }
 }
 
+void makeTable(unsigned short bottomLeftX, unsigned short bottomLeftY, unsigned short length, unsigned short width){
+  unsigned short xLimit = bottomLeftX + length, yLimit = bottomLeftY + width;
+
+  if(!outOfBounds(bottomLeftX, bottomLeftY) && map[bottomLeftX][bottomLeftY] == unoccupied) {
+    for (unsigned short x = bottomLeftX; x < xLimit; x++) {
+      for (unsigned short y = bottomLeftY; y < yLimit; y++){
+        map[x][y] = table;
+      }
+    }
+  }
+}
+
 //------------------------------ A* search ------------------------------
 bool findRoute(unsigned short startX, unsigned short startY, unsigned short goalX, unsigned short goalY) {
   graphNode nodeLst[MAP_LENGTH * MAP_WIDTH];
   graphNode succ;
   unsigned short startInd = coordToLstIndex(startX, startY), goalInd = coordToLstIndex(goalX, goalY), currInd, parInd, succInd, tempInd, openLstLength = 0;
-  unsigned short lowestT, iLowestT = UNDEFINED, step = 0;
+  unsigned short lowestT, step = 0;
   bool openLstIsEmpty = false;
 	
 	
@@ -160,13 +172,9 @@ bool findRoute(unsigned short startX, unsigned short startY, unsigned short goal
         pathStart++;     // Ensures that first element is overridden by itself to avoid duplicate vectors.
       }
 
-      while (true) {
+      while (currInd != startInd) {
         pathStart--;
         path[pathStart] = makeVec(currInd);
-
-        if (currInd == startInd) {
-          break;
-        }
 
         parInd = nodeLst[currInd].parentInd;
         tempInd = nodeLst[parInd].parentInd;
