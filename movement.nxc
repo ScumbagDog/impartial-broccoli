@@ -39,12 +39,17 @@ void moveAhead(vec2 &moveVector){
 
   while(tachoDegreesDriven < degreesToDrive){
     tachoDegreesDriven = MotorTachoCount(OUT_A);
-    byte sensorReading = SensorUS(IN_4);
-    if(sensorReading <= OBSTACLE_MIN_RANGE){
-      emergencyBrake();
-      if(emergencyBrakePanic){
-        break;
-      }
+    if(tachoDegreesDriven < tachoLimitToStopUS){
+    	byte sensorReading = SensorUS(IN_4);
+    	if(sensorReading <= OBSTACLE_MIN_RANGE){
+		  	float cmLeft = (degreesToDrive - tachoDegreesDriven) * ((WHEEL_CIRCUMFERENCE) / 360);
+		  	if(sensorReading < cmLeft){
+				  emergencyBrake();
+				  if(emergencyBrakePanic){
+				    break;
+		      }
+		    }
+		  }
     }
   }
   Off(OUT_AB);
