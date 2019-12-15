@@ -21,6 +21,7 @@ struct graphNode {
 };
 
 void fillMap();
+void makeTable(unsigned short bottomLeftX, unsigned short bottomLeftY, unsigned short length, unsigned short width);
 bool findRoute(unsigned short startX, unsigned short startY, unsigned short goalX, unsigned short goalY);
 bool isValid(unsigned short index);
 void initializeNodeLst(graphNode &nodeLst[]);
