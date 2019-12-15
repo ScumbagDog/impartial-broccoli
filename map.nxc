@@ -1,8 +1,4 @@
 #include "vectors.nxc"
-
-#define ROOM_LENGTH 475
-#define ROOM_WIDTH 345
-#define NUM_ACTIONS 4
 #define GRID_FIELD_WIDTH 10
 #define MAP_LENGTH 30
 #define MAP_WIDTH 30
@@ -112,9 +108,11 @@ bool findRoute(unsigned short startX, unsigned short startY, unsigned short goal
         succ.parentInd = currInd;
     
         if (nodeLst[succInd].whichLst == noLst || (nodeLst[succInd].whichLst == openLst && succ.t < nodeLst[succInd].t)) {
+          if (nodeLst[succInd].whichLst == noLst) {
+            openLstLength++;
+          }
+          succ.whichLst = openLst;
           nodeLst[succInd] = succ;
-          nodeLst[succInd].whichLst = openLst;
-          openLstLength++;
         }
       }
       
@@ -127,9 +125,11 @@ bool findRoute(unsigned short startX, unsigned short startY, unsigned short goal
         succ.parentInd = currInd;
     
         if (nodeLst[succInd].whichLst == noLst || (nodeLst[succInd].whichLst == openLst && succ.t < nodeLst[succInd].t)) {
+          if (nodeLst[succInd].whichLst == noLst) {
+            openLstLength++;
+          }
+          succ.whichLst = openLst;
           nodeLst[succInd] = succ;
-          nodeLst[succInd].whichLst = openLst;
-          openLstLength++;
         }
       }
 
@@ -142,9 +142,11 @@ bool findRoute(unsigned short startX, unsigned short startY, unsigned short goal
         succ.parentInd = currInd;
     
         if (nodeLst[succInd].whichLst == noLst || (nodeLst[succInd].whichLst == openLst && succ.t < nodeLst[succInd].t)) {
+          if (nodeLst[succInd].whichLst == noLst) {
+            openLstLength++;
+          }
+          succ.whichLst = openLst;
           nodeLst[succInd] = succ;
-          nodeLst[succInd].whichLst = openLst;
-          openLstLength++;
         }
       }
 
@@ -157,9 +159,11 @@ bool findRoute(unsigned short startX, unsigned short startY, unsigned short goal
         succ.parentInd = currInd;
     
         if (nodeLst[succInd].whichLst == noLst || (nodeLst[succInd].whichLst == openLst && succ.t < nodeLst[succInd].t)) {
+          if (nodeLst[succInd].whichLst == noLst) {
+            openLstLength++;
+          }
+          succ.whichLst = openLst;
           nodeLst[succInd] = succ;
-          nodeLst[succInd].whichLst = openLst;
-          openLstLength++;
         }
       }
 
