@@ -1,12 +1,16 @@
 #ifndef MOVE_IS_COMPILED
 #define MOVE_IS_COMPILED 1
 #define WHEEL_DIAMETER 5.5
-#define WHEEL_CIRCUMFERENCE WHEEL_DIAMETER * PI
+#define WHEEL_CIRCUMFERENCE (WHEEL_DIAMETER * PI)
 #define ROBOT_WIDTH 11.27
 #define CM_TO_VECTORUNIT 100
 #define MAX_MOTORPOWER 70
 #define MAX_WAIT_TIME 1000
 #define OBSTACLE_MIN_RANGE 30
+#define COMPASS_ALLOWED_UNCERTAINTY 5
+#define COMPASS_PORT IN_1
+#define VECTOR_MIN_BEFORE_CLEAR 0.005
+#define US_DEGREE_LIMIT 15
 #include "vectors.nxc"
 #include "quickMaffs.nxc"
 
@@ -14,19 +18,25 @@ void rotate(vec2 moveVector);
 float getRadiansToTurn(vec2 moveVector);
 void emergencyBrake();
 void waitState(bool &hasObstacle);
+int getWheelDegreesFromRobotRotation(float radiansToTurnRobot);
+void compassCorrection(int headingBeforeRotation, int headingAfterRotation, int degreesToTurnRobot);
 
 int sharedDegreesToTurn;
 int releaseMotorCallCount;
 bool emergencyBrakePanic;
 
-void moveAhead(float vectorUnitsToDrive, float &vectorUnitsDriven){
-  float fullRotationsToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / (WHEEL_CIRCUMFERENCE));
-  long degreesToDrive = round(DEGREES_PER_CIRCLE * fullRotationsToDrive);
+void moveAhead(vec2 &moveVector){
+	float vectorUnitsToDrive = vectorMag(moveVector);
+  float radiansToDrive = ((vectorUnitsToDrive * CM_TO_VECTORUNIT) / (WHEEL_DIAMETER / 2));
+  long degreesToDrive = round(radToDeg(radiansToDrive));
   long tachoDegreesDriven = 0;
   SetSensorUltrasonic(IN_4);
   emergencyBrakePanic = false;
-  
+  float vectorUnitsDriven;
+  int tachoLimitToStopUS = degreesToDrive - US_DEGREE_LIMIT;
+
   OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, 0, RESET_ALL); //*burde* virke med OUT_AB, men hvis ikke, så gør det i hvert sit kald
+
   while(tachoDegreesDriven < degreesToDrive){
     tachoDegreesDriven = MotorTachoCount(OUT_A);
     byte sensorReading = SensorUS(IN_4);
@@ -38,8 +48,14 @@ void moveAhead(float vectorUnitsToDrive, float &vectorUnitsDriven){
     }
   }
   Off(OUT_AB);
-  float tacofloat = tachoDegreesDriven;
-  vectorUnitsDriven = (tacofloat / DEGREES_PER_CIRCLE * (WHEEL_CIRCUMFERENCE) /CM_TO_VECTORUNIT);
+  float tachofloat = tachoDegreesDriven;
+  vectorUnitsDriven = (tachofloat / DEGREES_PER_CIRCLE * (WHEEL_CIRCUMFERENCE) /CM_TO_VECTORUNIT);
+  float remainingVectorUnits = vectorMag(moveVector) - vectorUnitsDriven;
+  if(abs(remainingVectorUnits) < VECTOR_MIN_BEFORE_CLEAR){
+    remainingVectorUnits = 0;
+  }
+  float percentileVectorLeft = remainingVectorUnits / vectorMag(moveVector);
+  moveVector = vectorScalarMult(moveVector, percentileVectorLeft);
 }
 
 void emergencyBrake(){
@@ -71,21 +87,72 @@ void waitState(bool &hasObstacle){
 }
 
 void rotate(vec2 moveVector){
-  //do some code here that actually turns the wheels based on getRadiansToTurn
   float radiansToTurnRobot = getRadiansToTurn(moveVector);
+  int degreesToTurnWheels = getWheelDegreesFromRobotRotation(radiansToTurnRobot);; //if the robot doesn't turn properly, change this function
+  int headingBeforeRotation = SensorHTCompass(COMPASS_PORT);
+  long tachoDegreesDriven = 0;
+
+  if(sign(moveVector.x) == 1){
+    OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, 100, RESET_ALL);
+  }else{
+    OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, -100, RESET_ALL);
+  }
+
+  while(tachoDegreesDriven < degreesToTurnWheels){
+    tachoDegreesDriven = MotorTachoCount(OUT_A) > MotorTachoCount(OUT_B) ? MotorTachoCount(OUT_A) : MotorTachoCount(OUT_B);
+  }
+  Off(OUT_AB);
+
+  int headingAfterRotation = SensorHTCompass(COMPASS_PORT);
+  int degreesToTurnRobot = radToDeg(radiansToTurnRobot);
+  degreesToTurnRobot = sign(moveVector.x) == -1 ? -degreesToTurnRobot : degreesToTurnRobot;
+  compassCorrection(headingBeforeRotation, headingAfterRotation, degreesToTurnRobot);
+}
+
+void compassCorrection(int headingBeforeRotation, int headingAfterRotation, int degreesToTurnRobot){
+  int tachoDegreesDriven = 0;
+  int differenceBetweenHeading = abs(headingAfterRotation - headingBeforeRotation);
+  int correctedDegree = degreesToTurnRobot - differenceBetweenHeading;
+  int wheelCorrection = getWheelDegreesFromRobotRotation(degToRad(correctedDegree));
+  
+   if(differenceBetweenHeading < -180){
+     differenceBetweenHeading = 360 + differenceBetweenHeading;
+   }
+   else if(differenceBetweenHeading > 180){
+     differenceBetweenHeading = 360 - differenceBetweenHeading;
+   }
+  
+  // hvis forskellen mellem den beregnede antal grader drejet og den faktisk antal grader drejet er mellem de tilladte usikkerhed så skal den korrigerer
+  if (!(differenceBetweenHeading <= degreesToTurnRobot + COMPASS_ALLOWED_UNCERTAINTY) || !(differenceBetweenHeading >= degreesToTurnRobot - COMPASS_ALLOWED_UNCERTAINTY) ) {
+    //hvis correctedDegree er negativ, så drej imod uret eller drej med uret
+    if (correctedDegree < 0) {
+      TextOut(0,LCD_LINE1,"string" + NumToStr(wheelCorrection));
+
+      OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, -100, RESET_ALL);
+      tachoDegreesDriven = 0;
+      while (tachoDegreesDriven < abs(wheelCorrection)) {
+        tachoDegreesDriven = MotorTachoCount(OUT_A) > MotorTachoCount(OUT_B) ? MotorTachoCount(OUT_A) : MotorTachoCount(OUT_B);
+      }
+    } else{
+      TextOut(0,LCD_LINE1,"hej");
+        OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, 100, RESET_ALL);
+        tachoDegreesDriven = 0;
+        while (tachoDegreesDriven < abs(wheelCorrection)) {
+          tachoDegreesDriven = MotorTachoCount(OUT_A) > MotorTachoCount(OUT_B) ? MotorTachoCount(OUT_A) : MotorTachoCount(OUT_B);
+        }
+      }
+    Off(OUT_AB);
+  }
+}
+
+int getWheelDegreesFromRobotRotation(float radiansToTurnRobot) {
   float distanceToTurnWheels = radiansToTurnRobot * (ROBOT_WIDTH / 2); //Robot width is the length of its radius, which is the length of one radian.
   float radiansToTurnWheels = distanceToTurnWheels / (WHEEL_DIAMETER / 2);
   int degreesToTurnWheels = round(radToDeg(radiansToTurnWheels)); //if the robot doesn't turn properly, change this line
 
-  long tachoDegreesDriven = 0;
-  
-  OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, 100, RESET_ALL);
-  while(tachoDegreesDriven < degreesToTurnWheels){
-    tachoDegreesDriven = MotorTachoCount(OUT_A) > MotorTachoCount(OUT_B) ? MotorTachoCount(OUT_A) : MotorTachoCount(OUT_B);
-    //Make some code for compass
-  }
-  Off(OUT_AB);
+  return degreesToTurnWheels;
 }
+
 
 float getRadiansToTurn(vec2 moveVector){
 
@@ -94,12 +161,6 @@ float getRadiansToTurn(vec2 moveVector){
   straightAheadVector.y = 1;
 
   float radsToRotate = vectorAngleBetween(straightAheadVector, moveVector);
-  
-  if(moveVector.x < 0){
-    //vectorAngleBetween only returns the absolute value, but we need to know if we should turn left or right.
-    //easiest way to check for this is to look at x value and update radsToRotate accordingly.
-    radsToRotate = -radsToRotate;
-  }
 
   return radsToRotate;
 }

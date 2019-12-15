@@ -1,0 +1,40 @@
+#define SENSOR_US_SPEED 5
+#define ULTRASONIC_PORT IN_4
+#define ROTATION_AMOUNT_DEGREE 5
+byte results = 0;
+
+void rotateSensorMotor();
+void activateUSSensor();
+void rotateRight(int rotation);
+void rotateLeft();
+
+
+task main() {
+   rotateSensorMotor();
+}
+
+void rotateSensorMotor() {
+   int i;
+   for(i = 0; i <= 90; i++) {
+      rotateRight(ROTATION_AMOUNT_DEGREE);
+      activateUSSensor();
+      NumOut(0, LCD_LINE2, i);
+      NumOut(0, LCD_LINE1, results);
+   }
+
+
+}
+
+void activateUSSensor() {
+   SetSensorUltrasonic(ULTRASONIC_PORT);
+   results = SensorUS(ULTRASONIC_PORT);
+
+}
+// 90 grader
+void rotateRight(int rotation){
+   RotateMotor(OUT_C, SENSOR_US_SPEED, rotation);
+}
+// -180 grader
+void rotateLeft(){
+   RotateMotor(OUT_C, SENSOR_US_SPEED, -180);
+}
