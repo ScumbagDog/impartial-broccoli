@@ -1,5 +1,4 @@
 #include "vectors.nxc"
-#define GRID_FIELD_WIDTH 10
 #define MAP_LENGTH 30
 #define MAP_WIDTH 30
 #define UNDEFINED -1
