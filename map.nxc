@@ -192,14 +192,11 @@ bool findRoute(unsigned short startX, unsigned short startY, unsigned short goal
 
         currInd = parInd;
       }
-      return true;
+      return true;                // Returns true if the goal was found
     } else {
-      return false;
+      return false;               // Returns false if the goal wasn't found
     }
   }
-  
-  // ---------- Returns true if the goal was found ----------
-  return nodeLst[goalInd].whichLst == closedLst;
 }
 
 bool isValid(unsigned short index) {
