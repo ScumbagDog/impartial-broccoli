@@ -18,15 +18,7 @@ task main() {
   SetSensorTouch(IN_2);
   SetSensorLowspeed(IN_4);
   initQueue(moveVectorQueue, VECTOR_QUEUE_SIZE);
-  vec2 test;
-  test.x = 0;
-  test.y = 1;
-  enqueueVector(test, moveVectorQueue, VECTOR_QUEUE_SIZE);
-  updateMoveVector();
-  moveAhead(currentMovementVector);
-  NumOut(0, LCD_LINE8, vectorMag(currentMovementVector));
-  Wait(3000);
-  //Precedes(schedule);
+  Precedes(schedule);
 }
 
 task schedule(){

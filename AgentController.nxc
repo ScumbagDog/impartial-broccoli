@@ -1,4 +1,3 @@
-#include "quickMaffs.nxc"
 #include "vectors.nxc"
 #include "MonteCarlo.nxc"
 #include "vectorQueue.nxc"

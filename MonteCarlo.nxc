@@ -1,4 +1,3 @@
-#include "quickMaffs.nxc"
 #include "vectors.nxc"
 #include "map.nxc"
 #define SAMPLE_SIZE  100 
@@ -6,23 +5,25 @@
 #define SENSOR_X 0
 #define SENSOR_Y  0
 #define ULTAR_SONIC_MAX 155
-#define NOISE_REDUCTION_1 1
-#define NOISE_REDUCTION_2 0
-#define NOISE_REDUCTION_3 1
-#define NOISE_REDUCTION_4 0
+#define NOISE_REDUCTION_1 0.5
+#define NOISE_REDUCTION_2 0.2
+#define NOISE_REDUCTION_3 0.8
+#define NOISE_REDUCTION_4 0.1
 #define ZHIT 0.82588
 #define ZMAX 0.17325
 #define ZRAND 0.00050299
 #define OHIT 8.4662
 #define DRAW_PROB 1000
+#define GRID_FIELD_WIDTH 10
 
 
 struct sensorReading{
  vec2 vector;
+ int odometryHeading;
+ 
  byte ultraSonic[];
  int ultraSonicHeading[];
  int heading;
- int odometryHeading;
 };
 
 
@@ -37,7 +38,6 @@ struct timeStep{
  state states[SAMPLE_SIZE];
  state probStates[SAMPLE_SIZE];
  sensorReading sensor;
- float maxProbability;
 };
 
 timeStep timeStep0;
@@ -58,18 +58,18 @@ void monteCarlo(sensorReading sensor)
   timeStep1.sensor = sensor;
   int i;
   for( i=0;i<SAMPLE_SIZE ;i++){
-        timeStep1.probStates[i]= sampleMotionModel(sensor,timeStep0.probStates[i],timeStep0.sensor);
+        timeStep1.probStates[i]= sampleMotionModel(sensor,timeStep0.states[i],timeStep0.sensor);
 
   }
   int tempDrawCount=0;
-  timeStep1.maxProbability = calculateMaxProb(sensor);
+  float maxProbability = calculateMaxProb(sensor);
   while(tempDrawCount < SAMPLE_SIZE){
-  for(i=0;i<SAMPLE_SIZE ;i++){
-	 if(timeStep1.probStates[i].probability*DRAW_PROB>=(Random(timeStep1.maxProbability*DRAW_PROB))){
+	for(i=0;i<SAMPLE_SIZE ;i++){
+	 if(timeStep1.probStates[i].probability>=(Random(maxProbability)+(Random(DRAW_PROB-1)/DRAW_PROB))){
 	    timeStep1.states[tempDrawCount]=timeStep1.probStates[i];
 		tempDrawCount++;
 	 }
-  }
+	}
   }
 }
 

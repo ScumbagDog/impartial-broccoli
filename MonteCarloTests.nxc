@@ -1,38 +1,81 @@
-#include "AgentController.nxc"
+#include "MonteCarloController.nxc"
 #include "vectors.nxc"
 sensorReading makeFirstSensorReading();
 sensorReading makeSecondSensorReading();
 
 task main(){
-	/*while(true){
-	ClearScreen();
-	Wait(1000);
-	
-	float test = Random(99);
-	NumOut(0,LCD_LINE1, Random(3)-1+test/100.00 );
-	Wait(1000);
-	}*/
+	SetSleepTimeout(100);
+	SetSleepTime(100);
 	int arraySize = 10;
 	vec2 inputArray[10];
-	initQueue(inputArray,10);
-	initiateTimeStep();
+	fillMap();
+	unsigned long initiateMean = 0;
+	unsigned long initiateMax =0;
+	unsigned long firstMoveMean = 0;
+	unsigned long firstMoveMax =0;
+	unsigned long nextMoveMean = 0;
+	unsigned long nextMoveMax =0;
 	int i;
-	int g =0;
-	NumOut(0,LCD_LINE1,g++);
-	Wait(2000);
-	firstMove(25,20,inputArray, arraySize);
-	
-	
-	ClearScreen();
-	NumOut(0,LCD_LINE1,g++);
-	Wait(2000);
-	nextMove(makeFirstSensorReading(),inputArray,arraySize);
-	ClearScreen();
-	NumOut(0,LCD_LINE1,g++);
-	Wait(2000);
-	nextMove(makeSecondSensorReading(),inputArray,arraySize);
-}
+	for(i=0; i<10; i++){
+		SetSleepTimer(0);
+		initQueue(inputArray,10);
+		unsigned long tick0 = CurrentTick();
+		initiateTimeStep();
+		tick0 = CurrentTick()-tick0;
+		
+		unsigned long tick1 = CurrentTick();
+		firstMove(28,28,inputArray, arraySize);
+		tick1 = CurrentTick()-tick1;
+		
 
+		unsigned long tick2 = CurrentTick();
+		nextMove(makeFirstSensorReading(),inputArray,arraySize);
+		tick2 = CurrentTick()-tick2;
+		if(tick0 > initiateMax){
+			initiateMax = tick0;
+		}
+		if(tick1 > firstMoveMax){
+			firstMoveMax = tick1;
+		}
+		if(tick2 > nextMoveMax){
+			nextMoveMax = tick2;
+		}
+		initiateMean = initiateMean + tick0;
+		firstMoveMean = firstMoveMean + tick1;
+		nextMoveMean = nextMoveMean + tick2;
+	}
+	initiateMean = initiateMean/i;
+	firstMoveMean = firstMoveMean/i;
+	nextMoveMean = nextMoveMean/i;
+	byte handle =0;
+	int fileSize = 1000;
+	string fileName = "MontePaaTur";
+	CreateFile(fileName,fileSize,handle);
+	string temp;
+	temp = NumToStr(initiateMean);
+	WriteLn(handle,temp);
+	temp = NumToStr(initiateMax);
+	WriteLn(handle,temp);
+	WriteLn(handle,"");
+	
+	temp = NumToStr(firstMoveMean);
+	WriteLn(handle,temp);
+	temp = NumToStr(firstMoveMax);
+	WriteLn(handle,temp);
+	WriteLn(handle,"");
+	
+	
+	temp = NumToStr(nextMoveMean);
+	WriteLn(handle,temp);
+	temp = NumToStr(nextMoveMax);
+	WriteLn(handle,temp);
+	WriteLn(handle,"");
+}
+/*
+503
+222264
+18347
+*/
 sensorReading makeFirstSensorReading(){
 	sensorReading sensorTest;
 	ArrayInit(sensorTest.ultraSonic,0,6);
