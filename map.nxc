@@ -1,3 +1,5 @@
+#ifndef MAP_IS_COMPILED
+#define MAP_IS_COMPILED 1
 #include "vectors.nxc"
 #define MAP_LENGTH 30
 #define MAP_WIDTH 30
@@ -43,7 +45,7 @@ void fillMap(){
       if (x == 0 || x == MAP_LENGTH - 1 || y == 0 || y == MAP_WIDTH - 1) {
         map[x][y] = wall;
       } else {
-        map[x][y] = unoccupied; 
+        map[x][y] = unoccupied;
       }
     }
   }
@@ -68,10 +70,10 @@ bool findRoute(unsigned short startX, unsigned short startY, unsigned short goal
   unsigned short startInd = coordToLstIndex(startX, startY), goalInd = coordToLstIndex(goalX, goalY), currInd, parInd, succInd, tempInd, openLstLength = 0;
   unsigned short lowestT, step = 0;
   bool openLstIsEmpty = false;
-	
-	
+
+
   if(startInd != goalInd && isValid(startInd) && isValid(goalInd)) {
-	
+
     initializeNodeLst(nodeLst);
 
     //---------- Add startInd to openLst ----------
@@ -100,12 +102,12 @@ bool findRoute(unsigned short startX, unsigned short startY, unsigned short goal
 
       //---------- Visit north successor ----------
       succInd = coordToLstIndex(calcX(currInd), calcY(currInd) + 1);
-      
+
       if (isValid(succInd) && nodeLst[succInd].whichLst != closedLst) {
         succ.c = nodeLst[currInd].c + NODE_TO_NODE_COST;
         succ.t = calcManhattanDist(succInd, goalInd) + succ.c;
         succ.parentInd = currInd;
-    
+
         if (nodeLst[succInd].whichLst == noLst || (nodeLst[succInd].whichLst == openLst && succ.t < nodeLst[succInd].t)) {
           if (nodeLst[succInd].whichLst == noLst) {
             openLstLength++;
@@ -114,15 +116,15 @@ bool findRoute(unsigned short startX, unsigned short startY, unsigned short goal
           nodeLst[succInd] = succ;
         }
       }
-      
+
       //---------- Visit east successor ----------
       succInd = coordToLstIndex(calcX(currInd) + 1, calcY(currInd));
-      
+
       if (isValid(succInd) && nodeLst[succInd].whichLst != closedLst) {
         succ.c = nodeLst[currInd].c + NODE_TO_NODE_COST;
         succ.t = calcManhattanDist(succInd, goalInd) + succ.c;
         succ.parentInd = currInd;
-    
+
         if (nodeLst[succInd].whichLst == noLst || (nodeLst[succInd].whichLst == openLst && succ.t < nodeLst[succInd].t)) {
           if (nodeLst[succInd].whichLst == noLst) {
             openLstLength++;
@@ -139,7 +141,7 @@ bool findRoute(unsigned short startX, unsigned short startY, unsigned short goal
         succ.c = nodeLst[currInd].c + NODE_TO_NODE_COST;
         succ.t = calcManhattanDist(succInd, goalInd) + succ.c;
         succ.parentInd = currInd;
-    
+
         if (nodeLst[succInd].whichLst == noLst || (nodeLst[succInd].whichLst == openLst && succ.t < nodeLst[succInd].t)) {
           if (nodeLst[succInd].whichLst == noLst) {
             openLstLength++;
@@ -151,12 +153,12 @@ bool findRoute(unsigned short startX, unsigned short startY, unsigned short goal
 
       //---------- Visit west successor ----------
       succInd = coordToLstIndex(calcX(currInd) - 1, calcY(currInd));
-      
+
       if (isValid(succInd) && nodeLst[succInd].whichLst != closedLst) {
         succ.c = nodeLst[currInd].c + NODE_TO_NODE_COST;
         succ.t = calcManhattanDist(succInd, goalInd) + succ.c;
         succ.parentInd = currInd;
-    
+
         if (nodeLst[succInd].whichLst == noLst || (nodeLst[succInd].whichLst == openLst && succ.t < nodeLst[succInd].t)) {
           if (nodeLst[succInd].whichLst == noLst) {
             openLstLength++;
@@ -171,7 +173,7 @@ bool findRoute(unsigned short startX, unsigned short startY, unsigned short goal
 
     // ---------- If the goal has been found, then we can generate the path ----------
     if (nodeLst[goalInd].whichLst == closedLst) {
-	
+
       if (pathStart != PATH_LENGTH) {     // If there are already elements in the path.
         pathStart++;     // Ensures that first element is overridden by itself to avoid duplicate vectors.
       }
@@ -200,7 +202,7 @@ bool findRoute(unsigned short startX, unsigned short startY, unsigned short goal
 }
 
 bool isValid(unsigned short index) {
-  return 0 <= index && index < MAP_LENGTH * MAP_WIDTH && map[calcX(index)][calcY(index)] == unoccupied; 
+  return 0 <= index && index < MAP_LENGTH * MAP_WIDTH && map[calcX(index)][calcY(index)] == unoccupied;
 }
 
 void initializeNodeLst(graphNode &nodeLst[]) {
@@ -274,7 +276,7 @@ float findDistToObject(vec2 vec) {
           y++;
         } else {
           y += 2 * layer;
-        } 
+        }
       }
     }
 
@@ -298,3 +300,4 @@ float min(float val1, float val2) {
     return val2;
   }
 }
+#endif

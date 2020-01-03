@@ -1,6 +1,8 @@
+#ifndef MONTE_CARLO_IS_COMPILED
+#define MONTE_CARLO_IS_COMPILED 1
 #include "vectors.nxc"
 #include "map.nxc"
-#define SAMPLE_SIZE  100 
+#define SAMPLE_SIZE  100
 #define SENSOR_HEADING 0
 #define SENSOR_X 0
 #define SENSOR_Y  0
@@ -13,16 +15,18 @@
 #define ZMAX 0.17325
 #define ZRAND 0.00050299
 #define OHIT 8.4662
-#define DRAW_PROB 1000
+#define DRAW_PROB 10000
 #define GRID_FIELD_WIDTH 10
-
+#define MAXPROB 1000000000
+#define ROTATION_AMOUNT_DEGREE 10
+#define READINGS_AMOUNT (360/ROTATION_AMOUNT_DEGREE)
 
 struct sensorReading{
  vec2 vector;
  int odometryHeading;
- 
- byte ultraSonic[];
- int ultraSonicHeading[];
+
+ byte ultraSonic[READINGS_AMOUNT];
+ int ultraSonicHeading[READINGS_AMOUNT];
  int heading;
 };
 
@@ -65,7 +69,7 @@ void monteCarlo(sensorReading sensor)
   float maxProbability = calculateMaxProb(sensor);
   while(tempDrawCount < SAMPLE_SIZE){
 	for(i=0;i<SAMPLE_SIZE ;i++){
-	 if(timeStep1.probStates[i].probability>=(Random(maxProbability)+(Random(DRAW_PROB-1)/DRAW_PROB))){
+	 if(timeStep1.probStates[i].probability>=(Random(maxProbability-1)+(Random(DRAW_PROB)/DRAW_PROB))){
 	    timeStep1.states[tempDrawCount]=timeStep1.probStates[i];
 		tempDrawCount++;
 	 }
@@ -74,14 +78,14 @@ void monteCarlo(sensorReading sensor)
 }
 
 state sampleMotionModel(sensorReading sensor, state previousState, sensorReading previousSensorReading){
- 
+
       state newState;
 	  newState = sensorMotionModel(sensor, previousState, previousSensorReading);
       newState.probability = likelihoodFinderModel(sensor,newState);
       return newState;
 }
 float calculateMaxProb(sensorReading sensor){
-	float maxProbability = 100000000.0;
+	float maxProbability = MAXPROB;
 	int i;
 	int arrayLength = ArrayLen(sensor.ultraSonic);
 	for (i=0; i<arrayLength;i++){
@@ -89,7 +93,7 @@ float calculateMaxProb(sensorReading sensor){
 			maxProbability = maxProbability*(ZHIT*probabilityTriangular(0,pow(OHIT,2))+ZRAND/ZMAX);
 		}
 
-	
+
 	}
 	return maxProbability;
 }
@@ -97,7 +101,7 @@ float calculateMaxProb(sensorReading sensor){
 state sensorMotionModel(sensorReading sensor, state previousState, sensorReading previousSensorReading){
 	  float previousOdometryHeading = (previousSensorReading.odometryHeading * 2 * PI)/360;
 	  float currentOdomentryHeading = (sensor.odometryHeading *2 * PI)/360;
-	  
+
       float rotation1 = atan2(sensor.vector.y-previousSensorReading.vector.y,sensor.vector.x-previousSensorReading.vector.x)-previousOdometryHeading;
       float trans = sqrt(pow(previousSensorReading.vector.x-sensor.vector.x,2)+pow(previousSensorReading.vector.y-sensor.vector.y,2));
       float rotation2 = currentOdomentryHeading-previousOdometryHeading-rotation1;
@@ -107,8 +111,8 @@ state sensorMotionModel(sensorReading sensor, state previousState, sensorReading
       float rotation1Updated = rotation1 - sample(NOISE_REDUCTION_1*rotation1+NOISE_REDUCTION_2*trans);
       float transUpdated = trans-sample(NOISE_REDUCTION_3*trans+NOISE_REDUCTION_4*(rotation1+rotation2));
       float rotation2Updated = rotation2 - sample(NOISE_REDUCTION_1*rotation2+NOISE_REDUCTION_2*trans);
-      
-     
+
+
       newState.x = trunc(previousState.x+transUpdated*cos(previousOdometryHeading+rotation1Updated)+0.5);
       newState.y = trunc(previousState.y+transUpdated*sin(previousOdometryHeading+rotation1Updated)+0.5);
       newState.heading = ((previousOdometryHeading + rotation1Updated + rotation2Updated)/ (2 * PI))  *360;
@@ -135,7 +139,7 @@ float probabilityTriangular(float a, float b){
 
 
 float likelihoodFinderModel(sensorReading sensor, state newState){
-      float probability =100000000.0;
+      float probability =MAXPROB;
 	  int i=0;
 	  int arrayLength = ArrayLen(sensor.ultraSonic);
 	  for (i=0; i<arrayLength;i++){
@@ -143,7 +147,7 @@ float likelihoodFinderModel(sensorReading sensor, state newState){
 			float robotHeading = (sensor.heading * 2 * PI)/360;
 			float sonicHeading = (+sensor.ultraSonicHeading[i] *2 * PI)/360;
 			float sonicReading = sensor.ultraSonic[i]/GRID_FIELD_WIDTH+1;
-			
+
 			int sensorXt = trunc((newState.x+ SENSOR_X * cos(robotHeading)-SENSOR_Y*sin(robotHeading)+sonicReading*cos(robotHeading+sonicHeading))+0.5);
 			int sensorYt = trunc((newState.y+ SENSOR_Y * cos(robotHeading)+SENSOR_X*sin(robotHeading)+sonicReading*sin(robotHeading+sonicHeading))+0.5);
 			vec2 vec;
@@ -166,7 +170,8 @@ state findBestState(){
 		if(timeStep1.states[i].probability > bestState.probability){
 			bestState = timeStep1.states[i];
 		}
-		
+
 	}
 	return bestState;
 }
+#endif

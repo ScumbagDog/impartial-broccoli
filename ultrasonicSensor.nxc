@@ -1,28 +1,49 @@
-#define SENSOR_US_SPEED 5
+#ifndef ULTRASONICSENSOR_IS_COMPILED
+#define ULTRASONICSENSOR_IS_COMPILED 1
+#include "MonteCarlo.nxc"
+#define SENSOR_US_SPEED 15
 #define ULTRASONIC_PORT IN_4
-#define ROTATION_AMOUNT_DEGREE 5
+
+
+
 byte results = 0;
+int sensorHeading = 90;
 
-void rotateSensorMotor();
+sensorReading makeSensorReadings();
 void activateUSSensor();
-void rotateRight(int rotation);
-void rotateLeft();
+void rotateUS(int rotation);
+sensorReading initiateReading();
 
+sensorReading makeSensorReadings() {
+    sensorReading reading = initiateReading();
+   int i, j, k;
+   for(i = 1; i <=READINGS_AMOUNT/4 ; i++) {
+      rotateUS(ROTATION_AMOUNT_DEGREE);
+      activateUSSensor();
+      reading.ultraSonic[i] = results;
+      reading.ultraSonicHeading[i] = sensorHeading;
+   }
+   for(j = 1; j <=READINGS_AMOUNT/2 ; j++) {
+      rotateUS(-ROTATION_AMOUNT_DEGREE);
+      activateUSSensor();
+      reading.ultraSonic[j+i] = results;
+      reading.ultraSonicHeading[j+i] = sensorHeading;
+   }
+   for(k = 1; k <=READINGS_AMOUNT/4 ; k++) {
+      rotateUS(ROTATION_AMOUNT_DEGREE);
+      activateUSSensor();
+      reading.ultraSonic[k+j+i] = results;
+      reading.ultraSonicHeading[k+j+i] = sensorHeading;
+   }
+   return reading;
 
-task main() {
-   rotateSensorMotor();
 }
 
-void rotateSensorMotor() {
-   int i;
-   for(i = 0; i <= 90; i++) {
-      rotateRight(ROTATION_AMOUNT_DEGREE);
-      activateUSSensor();
-      NumOut(0, LCD_LINE2, i);
-      NumOut(0, LCD_LINE1, results);
-   }
-
-
+sensorReading initiateReading(){
+  sensorReading reading;
+  ArrayInit(reading.ultraSonic, 0,READINGS_AMOUNT );
+  ArrayInit(reading.ultraSonicHeading, 0,READINGS_AMOUNT );
+  return reading;
 }
 
 void activateUSSensor() {
@@ -31,10 +52,8 @@ void activateUSSensor() {
 
 }
 // 90 grader
-void rotateRight(int rotation){
+void rotateUS(int rotation){
    RotateMotor(OUT_C, SENSOR_US_SPEED, rotation);
+   sensorHeading = sensorHeading - rotation;
 }
-// -180 grader
-void rotateLeft(){
-   RotateMotor(OUT_C, SENSOR_US_SPEED, -180);
-}
+#endif

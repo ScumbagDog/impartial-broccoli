@@ -1,34 +1,37 @@
 
 #include "MonteCarlo.nxc"
 #include "vectorQueue.nxc"
+#include "ultrasonicSensor.nxc"
 #define START_X 1
 #define START_Y 1
 #define START_HEADING 90
 #define VECTORS_TO_SCHEDUEL 3
+#define GOAL_X 28
+#define GOAL_Y 28
 
 void initiateTimeStep();
 void firstMove( unsigned short goalx, unsigned short goaly, vec2 &inputArray[],int arraySize);
-void nextMove(sensorReading currentSensorReading,vec2 &inputArray[], int arraySize);
-void expandPath();
-void schedulePartOfPath(vec2 &inputArray[], int arraySize);
+bool nextMove(sensorReading currentSensorReading,vec2 &inputArray[], int arraySize);
+void expandPath(state bestState);
+void schedulePartOfPath(vec2 &inputArray[], int arraySize, state bestState);
 void newTimeStep(sensorReading currentSensorReading);
 
 void initiateTimeStep(){
 	fillMap();
-	
+
 	state probState;
 	probState.x = START_X;
 	probState.y = START_Y;
 	probState.heading = START_HEADING;
 	probState.probability = 1;
-	
+
 	ArrayInit(timeStep1.probStates, probState, SAMPLE_SIZE);
 	ArrayInit(timeStep1.states, probState, SAMPLE_SIZE);
-	
+
 	vec2 vec;
 	vec.x=START_X;
 	vec.y=START_Y;
-	
+
 	sensorReading sensorReading0;
 	sensorReading0.vector = vec;
 	sensorReading0.odometryHeading = START_HEADING;
@@ -38,29 +41,31 @@ void initiateTimeStep(){
 void firstMove(unsigned short goalx, unsigned short goaly, vec2 &inputArray[], int arraySize){
 	state bestState = findBestState();
 	findRoute(bestState.x,bestState.y,goalx,goaly);
-	schedulePartOfPath(inputArray, arraySize);
+	schedulePartOfPath(inputArray, arraySize, bestState);
 }
-void nextMove(sensorReading currentSensorReading,vec2 &inputArray[], int arraySize){
+bool nextMove(sensorReading currentSensorReading,vec2 &inputArray[], int arraySize){
 	newTimeStep(currentSensorReading);
-	expandPath();
-	schedulePartOfPath(inputArray, arraySize);
+	state bestState =findBestState();
+	if(bestState.x = GOAL_X && bestState.y = GOAL_Y){
+		return false;
+	}
+	expandPath(bestState);
+	schedulePartOfPath(inputArray, arraySize,bestState);
+	return true;
 }
-void expandPath(){
-	state bestState = findBestState();
+void expandPath(state bestState){
 	findRoute(bestState.x,bestState.y,path[pathStart].x,path[pathStart].y);
-	
+
 
 }
-void schedulePartOfPath(vec2 &inputArray[], int arraySize){
+void schedulePartOfPath(vec2 &inputArray[], int arraySize, state bestState){
 	int i;
 
-	state bestState =findBestState();
-	
 	int odometryHeading1= bestState.heading;
 	vec2 commandVec;
 	commandVec.x =bestState.x;
 	commandVec.y =bestState.y;
-	
+
 	for(i=0;i<VECTORS_TO_SCHEDUEL;i++){
 		if(pathStart >= 0){
 			vec2 nextVector = path[pathStart];
