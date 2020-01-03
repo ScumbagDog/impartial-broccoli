@@ -1,15 +1,19 @@
 //Remember to compile with the -EF flags, else enhanced firmware functions won't be defined
 #include "movement.nxc"
 #include "vectorQueue.nxc"
+#include "MonteCarloController.nxc"
+#include "ultrasonicSensor.nxc"
 #define VECTOR_QUEUE_SIZE 10
 
-task schedule();
+
+void schedule();
 void updateMoveVector();
+void runVectors();
 
 int cycleCount = 0;
 unsigned int touchSensorOutput = 0;
 int angleSensorOutput = 0;
-vec2 currentMovementVector;	
+vec2 currentMovementVector;
 
 vec2 moveVectorQueue[VECTOR_QUEUE_SIZE];
 
@@ -18,17 +22,26 @@ task main() {
   SetSensorTouch(IN_2);
   SetSensorLowspeed(IN_4);
   initQueue(moveVectorQueue, VECTOR_QUEUE_SIZE);
-  Precedes(schedule);
+  currentMovementVector = getNullVector();
+
+  initiateTimeStep();
+  firstMove(GOAL_X, GOAL_Y, moveVectorQueue, VECTOR_QUEUE_SIZE);
+  schedule();
 }
 
-task schedule(){
-  while(true){
-    rotate(currentMovementVector);
-    moveAhead(currentMovementVector);
-    currentMovementVector = getNullVector();
-    updateMoveVector();
-  }
+void schedule(){
+  do{
+    for (int i = 0; i < VECTORS_TO_SCHEDUEL; i++) {
+      runVectors();
+    }
+  }while (nextMove(makeSensorReadings(),moveVectorQueue, VECTOR_QUEUE_SIZE));
 }
+
+void runVectors() {
+      updateMoveVector();
+      rotate(currentMovementVector);
+      moveAhead(currentMovementVector);
+  }
 
 void updateMoveVector(){
   if(isNullVector(currentMovementVector)){
