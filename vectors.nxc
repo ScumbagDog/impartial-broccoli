@@ -1,6 +1,6 @@
 #ifndef VECTOR_IS_COMPILED
 #define VECTOR_IS_COMPILED 1
-#include "quickMaffs.nxc"
+#include "mathEquations.nxc"
 struct vec2
 {
   float x;

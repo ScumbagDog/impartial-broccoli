@@ -6,13 +6,13 @@
 #define CM_TO_VECTORUNIT 100
 #define MAX_MOTORPOWER 70
 #define MAX_WAIT_TIME 1000
-#define OBSTACLE_MIN_RANGE 30
+#define OBSTACLE_MIN_RANGE 7
 #define COMPASS_ALLOWED_UNCERTAINTY 5
 #define COMPASS_PORT IN_1
 #define VECTOR_MIN_BEFORE_CLEAR 0.005
 #define US_DEGREE_LIMIT 15
 #include "vectors.nxc"
-#include "quickMaffs.nxc"
+#include "mathEquations.nxc"
 
 void rotate(vec2 moveVector);
 float getRadiansToTurn(vec2 moveVector);
@@ -35,19 +35,19 @@ void moveAhead(vec2 &moveVector){
   float vectorUnitsDriven;
   int tachoLimitToStopUS = degreesToDrive - US_DEGREE_LIMIT;
 
-  OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, 0, RESET_ALL); //*burde* virke med OUT_AB, men hvis ikke, så gør det i hvert sit kald
+  OnFwdSyncEx(OUT_AB, MAX_MOTORPOWER, 0, RESET_ALL); // *burde* virke med OUT_AB, men hvis ikke, så gør det i hvert sit kald
 
   while(tachoDegreesDriven < degreesToDrive){
     tachoDegreesDriven = MotorTachoCount(OUT_A);
-    
+
     if(tachoDegreesDriven < tachoLimitToStopUS){
     	byte sensorReading = SensorUS(IN_4);
-    	
+
     	if(sensorReading <= OBSTACLE_MIN_RANGE){
 		  	float cmLeft = (degreesToDrive - tachoDegreesDriven) * ((WHEEL_CIRCUMFERENCE) / 360);
-		  	
+
 		  	if(sensorReading < cmLeft){
-		  	
+
 				  emergencyBrake();
 				  if(emergencyBrakePanic){
 				    break;
@@ -123,14 +123,14 @@ void compassCorrection(int headingBeforeRotation, int headingAfterRotation, int 
   int differenceBetweenHeading = abs(headingAfterRotation - headingBeforeRotation);
   int correctedDegree = degreesToTurnRobot - differenceBetweenHeading;
   int wheelCorrection = getWheelDegreesFromRobotRotation(degToRad(correctedDegree));
-  
+
    if(differenceBetweenHeading < -180){
      differenceBetweenHeading = 360 + differenceBetweenHeading;
    }
    else if(differenceBetweenHeading > 180){
      differenceBetweenHeading = 360 - differenceBetweenHeading;
    }
-  
+
   // hvis forskellen mellem den beregnede antal grader drejet og den faktisk antal grader drejet er mellem de tilladte usikkerhed så skal den korrigerer
   if (!(differenceBetweenHeading <= degreesToTurnRobot + COMPASS_ALLOWED_UNCERTAINTY) || !(differenceBetweenHeading >= degreesToTurnRobot - COMPASS_ALLOWED_UNCERTAINTY) ) {
     //hvis correctedDegree er negativ, så drej imod uret eller drej med uret
